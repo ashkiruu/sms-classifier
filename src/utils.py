@@ -1,94 +1,51 @@
-"""
-utils.py — Shared utility functions for the SMS Classifier project.
+"""Utility helpers for paths, logging, and label interpretation."""
+from __future__ import annotations
 
-Provides path resolution, directory management, logging setup,
-and other helpers used across eda.py and preprocessing.py.
-"""
-
-import os
 import logging
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_ROOT / "data"
+RAW_DATA_DIR = DATA_DIR / "raw"
+CONFIDENCE_DATA_DIR = DATA_DIR / "confidence"
+OUTPUTS_DIR = PROJECT_ROOT / "outputs"
+FIGURES_DIR = OUTPUTS_DIR / "figures"
+REPORTS_DIR = OUTPUTS_DIR / "reports"
+MODELS_DIR = PROJECT_ROOT / "models"
 
-# ── Project root (one level above src/) ─────────────────────────────────────
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_TRAIN_DATA = RAW_DATA_DIR / "main_dataset.xlsx"
+DEFAULT_CONFIDENCE_DATA = CONFIDENCE_DATA_DIR / "confidence_set.xlsx"
 
-DATA_RAW_DIR   = PROJECT_ROOT / "data" / "raw"
-FIGURES_DIR    = PROJECT_ROOT / "outputs" / "figures"
-REPORTS_DIR    = PROJECT_ROOT / "outputs" / "reports"
-MODELS_DIR     = PROJECT_ROOT / "models"
-
-
-def get_project_root() -> Path:
-    """Return the absolute path to the project root directory."""
-    return PROJECT_ROOT
-
-
-def get_data_path(filename: str) -> Path:
-    """
-    Resolve the full path to a raw data file.
-
-    Args:
-        filename: Name of the file inside data/raw/ (e.g. 'tagalog-sms.xlsx').
-
-    Returns:
-        Absolute Path object to the file.
-    """
-    return DATA_RAW_DIR / filename
-
+LABEL_DESCRIPTIONS = {
+    "spam": "Suspicious, scam-like, or unsolicited content.",
+    "gov": "Government advisory or public-service message.",
+    "notifs": "Service or account notification.",
+    "notif": "Service or account notification.",
+    "otp": "One-time password or verification message.",
+    "ads": "Promotional or marketing content.",
+}
 
 def ensure_dirs() -> None:
-    """
-    Create all required output directories if they do not already exist.
-    Safe to call multiple times (no-op if dirs are present).
-    """
-    for directory in [FIGURES_DIR, REPORTS_DIR, MODELS_DIR]:
+    for directory in [RAW_DATA_DIR, CONFIDENCE_DATA_DIR, OUTPUTS_DIR, FIGURES_DIR, REPORTS_DIR, MODELS_DIR]:
         directory.mkdir(parents=True, exist_ok=True)
 
-
-def get_figure_path(filename: str) -> Path:
-    """
-    Resolve the full path for saving a figure.
-
-    Args:
-        filename: Desired filename (e.g. 'class_distribution.png').
-
-    Returns:
-        Absolute Path object inside outputs/figures/.
-    """
+def get_data_path(filename: str) -> Path:
     ensure_dirs()
-    return FIGURES_DIR / filename
+    return RAW_DATA_DIR / filename
 
+def get_confidence_path(filename: str) -> Path:
+    ensure_dirs()
+    return CONFIDENCE_DATA_DIR / filename
 
 def get_report_path(filename: str) -> Path:
-    """
-    Resolve the full path for saving a report file.
-
-    Args:
-        filename: Desired filename (e.g. 'eda_summary.txt').
-
-    Returns:
-        Absolute Path object inside outputs/reports/.
-    """
     ensure_dirs()
     return REPORTS_DIR / filename
 
+def get_figure_path(filename: str) -> Path:
+    ensure_dirs()
+    return FIGURES_DIR / filename
 
 def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
-    """
-    Create and configure a named logger with a consistent format.
-
-    Args:
-        name:  Logger name, typically __name__ of the calling module.
-        level: Logging level (default: logging.INFO).
-
-    Returns:
-        Configured Logger instance.
-
-    Example:
-        >>> logger = setup_logger(__name__)
-        >>> logger.info("Logger ready.")
-    """
     logger = logging.getLogger(name)
     if not logger.handlers:
         handler = logging.StreamHandler()
@@ -100,3 +57,6 @@ def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
         logger.addHandler(handler)
     logger.setLevel(level)
     return logger
+
+def interpret_label(label: str) -> str:
+    return LABEL_DESCRIPTIONS.get(label, "No interpretation available.")
