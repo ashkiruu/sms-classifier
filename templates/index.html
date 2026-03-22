@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Classifier | Threat Detection System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a;
+            color: #ededed;
+        }
+        /* Custom scrollbar for a sleeker look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #262626; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #404040; }
+    </style>
+</head>
+<body class="antialiased min-h-screen selection:bg-gray-700 selection:text-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+        
+        <header class="mb-10 md:mb-16 border-b border-neutral-800 pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div class="max-w-3xl">
+                <h1 class="text-3xl md:text-4xl font-light tracking-tight text-neutral-400">
+                    <span class="text-red-600 font-bold tracking-tighter drop-shadow-[0_0_8px_rgba(220,38,38,0.3)] uppercase mr-1">SMS</span> 
+                    <span class="text-white font-semibold">Security Analysis</span>
+                </h1>
+                <p class="text-neutral-500 mt-4 text-sm md:text-base leading-relaxed">
+                    Advanced classification of Tagalog and English short message services utilizing Ensemble and Bi-LSTM neural architectures.
+                </p>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-neutral-900/50 rounded-full border border-neutral-800">
+                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="text-[10px] tracking-widest text-neutral-400 font-bold uppercase">System Active</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+            
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                <div class="bg-[#121212] border border-neutral-800 p-6 md:p-8 rounded-xl shadow-sm">
+                    <label class="block text-xs font-medium mb-4 text-neutral-500 uppercase tracking-widest">
+                        Payload Input
+                    </label>
+                    
+                    <textarea 
+                        id="smsInput" 
+                        class="w-full h-40 md:h-56 bg-[#0a0a0a] border border-neutral-800 rounded-lg p-4 text-sm text-neutral-200 placeholder-neutral-600 focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 outline-none transition-all resize-y" 
+                        placeholder="Enter message content for analysis..."></textarea>
+                    
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-6 gap-4">
+                        <div class="relative w-full sm:w-auto">
+                            <select id="modelSelect" class="w-full sm:w-auto appearance-none bg-[#0a0a0a] border border-neutral-800 rounded-md px-4 py-2.5 text-sm text-neutral-300 outline-none focus:border-neutral-500 cursor-pointer pr-10">
+                                <option value="ensemble">Ensemble Engine</option>
+                                <option value="nn">Neural Network (Bi-LSTM)</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-neutral-500">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                        
+                        <button 
+                            onclick="runAnalysis()" 
+                            class="w-full sm:w-auto bg-white hover:bg-neutral-200 text-black font-medium py-2.5 px-8 rounded-md transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#121212] focus:ring-white">
+                            Execute Analysis
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-5 h-full">
+                <div id="resultCard" class="bg-[#121212] border border-neutral-800 p-6 md:p-8 rounded-xl shadow-sm h-full flex flex-col opacity-50 transition-opacity duration-300">
+                    <h2 class="text-xs font-medium text-neutral-500 uppercase tracking-widest mb-6">Diagnostic Output</h2>
+                    
+                    <div class="mb-8">
+                        <div id="prediction" class="text-2xl md:text-3xl font-semibold text-white mb-2">Awaiting Input</div>
+                        <p id="meaning" class="text-neutral-400 text-sm leading-relaxed">System ready for classification.</p>
+                    </div>
+                    
+                    <div class="mt-auto">
+                        <h3 class="text-xs font-medium text-neutral-500 uppercase tracking-widest mb-4">Confidence Metrics</h3>
+                        <div id="confidenceBars" class="space-y-4">
+                            <div class="opacity-30">
+                                <div class="flex justify-between text-xs mb-1.5 text-neutral-400">
+                                    <span>--</span>
+                                    <span>0.0%</span>
+                                </div>
+                                <div class="w-full bg-neutral-900 rounded-full h-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        async function runAnalysis() {
+            const text = document.getElementById('smsInput').value;
+            const modelType = document.getElementById('modelSelect').value;
+            const resultCard = document.getElementById('resultCard');
+            const btn = document.querySelector('button');
+            
+            if(!text.trim()) {
+                alert("Please provide a message payload for analysis.");
+                return;
+            }
+
+            // UI Loading state
+            btn.innerText = "Analyzing...";
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, model_type: modelType })
+                });
+                const data = await response.json();
+
+                // Display Results
+                resultCard.classList.remove('opacity-50');
+                document.getElementById('prediction').innerText = data.prediction;
+                document.getElementById('meaning').innerText = data.interpretation;
+
+                const barsContainer = document.getElementById('confidenceBars');
+                barsContainer.innerHTML = '';
+                
+                Object.entries(data.confidence_scores).forEach(([label, score]) => {
+                    const percentage = (score * 100).toFixed(1);
+                    // Dynamically set color based on certainty (optional, kept monochromatic here for sleekness)
+                    barsContainer.innerHTML += `
+                        <div>
+                            <div class="flex justify-between text-xs mb-1.5 font-medium">
+                                <span class="text-neutral-300">${label}</span>
+                                <span class="text-white">${percentage}%</span>
+                            </div>
+                            <div class="w-full bg-neutral-900 rounded-full h-1 overflow-hidden">
+                                <div class="bg-white h-1 rounded-full transition-all duration-1000 ease-out" style="width: 0%" data-target="${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Trigger animation for the bars
+                setTimeout(() => {
+                    barsContainer.querySelectorAll('[data-target]').forEach(bar => {
+                        bar.style.width = bar.getAttribute('data-target');
+                    });
+                }, 50);
+
+            } catch (error) {
+                console.error("Analysis failed:", error);
+                document.getElementById('prediction').innerText = "Error";
+                document.getElementById('meaning').innerText = "Connection to classification engine failed.";
+            } finally {
+                // Restore button state
+                btn.innerText = "Execute Analysis";
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

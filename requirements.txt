@@ -1,10 +1,21 @@
-pandas==2.2.2
-openpyxl==3.1.2
-matplotlib==3.9.0
-seaborn==0.13.2
-nltk==3.8.1
-scikit-learn==1.5.0
-numpy==1.26.4
+#pandas==2.2.2
+#openpyxl==3.1.2
+#matplotlib==3.9.0
+#seaborn==0.13.2
+#nltk==3.8.1
+#scikit-learn
+#numpy==1.26.4
+#tensorflow==2.21.0
 
-# Deep Learning Framework
+#Web Framework
+flask==3.1.3
+
+#Machine Learning & Logic
 tensorflow==2.21.0
+scikit-learn==1.8.0
+pandas==3.0.1
+numpy==2.4.3
+joblib==1.5.3
+
+#Utilities
+matplotlib==3.10.8

@@ -1,0 +1,23 @@
+{
+  "best_initialization": "Xavier",
+  "test_results": [
+    {
+      "Initialization": "Xavier",
+      "Accuracy": 0.9331395348837209,
+      "F1_Macro": 0.8697297544047308,
+      "Kappa": 0.8877093386318479
+    },
+    {
+      "Initialization": "Heuristic",
+      "Accuracy": 0.6177325581395349,
+      "F1_Macro": 0.31367460268668956,
+      "Kappa": 0.388411371633109
+    },
+    {
+      "Initialization": "Random",
+      "Accuracy": 0.5915697674418605,
+      "F1_Macro": 0.148675799086758,
+      "Kappa": 0.0
+    }
+  ]
+}
