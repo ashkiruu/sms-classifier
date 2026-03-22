@@ -1,132 +1,175 @@
-# SMS Classifier — Tagalog Multi-Class NLP Pipeline
+# SMS Classifier - Ensemble Learning Web Implementation
 
-A clean, production-ready Python project for classifying Tagalog SMS messages
-into five categories: **spam · gov · notif · otp · ads**.
+This project is the **ensemble-learning part** of a web-based SMS/email classifier.
+It includes:
 
----
+- a cleaned preprocessing pipeline
+- two ensemble models: **Soft Voting** and **Stacking**
+- automatic comparison between the two models using a validation split
+- a proper **train/test split** from the main dataset
+- a separate **15-row confidence set** used only after training
+- a web app built with **Streamlit**
 
-## Project Structure
+## Python version
+
+Use **Python 3.13** for this project.
+
+## What the model predicts
+
+The model predicts the **message type**:
+
+- `spam` - suspicious, scam-like, or unsolicited content
+- `gov` - government advisory or public-service message
+- `notifs` - service or account notification
+- `otp` - one-time password or verification message
+- `ads` - promotional content
+
+## Dataset design
+
+### Main dataset
+
+Used for training and formal evaluation:
+
+- `data/raw/main_dataset.xlsx`
+- `data/raw/main_dataset.csv`
+
+Workflow:
+- preprocess the full main dataset
+- create an **80/20 train/test split**
+- split the training portion again into **train/validation** for model comparison
+- use the held-out test split for final evaluation
+
+### Separate confidence set
+
+Used only after training:
+
+- `data/confidence/confidence_set.xlsx`
+- `data/confidence/confidence_set.csv`
+
+This is the 15-row file and is **not used for training**.
+
+## Project structure
 
 ```
-sms-classifier/
-│
-├── data/
-│   └── raw/
-│       └── tagalog-sms.xlsx        ← place your dataset here
-│
-├── src/
-│   ├── utils.py                    ← shared paths, logger, helpers
-│   ├── eda.py                      ← exploratory data analysis
-│   └── preprocessing.py            ← text cleaning & feature prep
-│
-├── outputs/
-│   ├── figures/                    ← generated plots (PNG)
-│   └── reports/                    ← generated text reports
-│
-├── models/                         ← saved model artefacts (future)
-│
+sms-classifier-ensemble-py313-clean/
+├── app.py
 ├── requirements.txt
 ├── README.md
-└── .gitignore
+├── data/
+│   ├── raw/
+│   └── confidence/
+├── src/
+│   ├── utils.py
+│   ├── preprocessing.py
+│   ├── eda.py
+│   ├── train_ensemble.py
+│   ├── evaluate_confidence.py
+│   └── predict.py
+├── models/
+└── outputs/
 ```
 
----
+## What each file does
 
-## Setup
+### `src/preprocessing.py`
+Loads the dataset, normalizes column names, cleans the message text, and builds the processed `clean_text` column.
 
-### 1. Clone & enter the repository
+### `src/train_ensemble.py`
+Trains both ensemble methods, compares them on the validation split, retrains the best one on the full training portion, evaluates on the held-out test split, and saves the models plus reports.
 
-```bash
-git clone https://github.com/<your-username>/sms-classifier.git
-cd sms-classifier
-```
+### `src/evaluate_confidence.py`
+Runs the saved best model on the external 15-row confidence set and saves the predictions.
 
-### 2. Create a virtual environment
+### `src/predict.py`
+Lets you test one message from the terminal.
 
-```bash
+### `app.py`
+Runs the Streamlit website. The user enters a message, clicks **Predict**, and the app shows:
+- predicted message type
+- label meaning
+- confidence per class
+
+## Fresh start setup
+
+### 1. Extract the zip
+Unzip the project somewhere easy to access, such as your Downloads folder.
+
+### 2. Open a terminal in the project folder
+The correct folder is the one that contains:
+- `requirements.txt`
+- `app.py`
+- `src`
+- `data`
+
+### 3. Create a virtual environment
+
+#### Windows PowerShell
+```powershell
 python -m venv .venv
-source .venv/bin/activate        # Linux / macOS
-.venv\Scripts\activate           # Windows
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Install dependencies
-
+#### Linux/macOS
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 4. Install dependencies
+```bash
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
-### 4. Add the dataset
+## Run order
 
-Place `tagalog-sms.xlsx` inside `data/raw/`.
-
----
-
-## Running the Scripts
-
-Both scripts are run from the **project root** so that relative paths resolve correctly.
-
-### EDA
-
+### A. Train and compare the ensemble models
 ```bash
-python src/eda.py
+python .\src\train_ensemble.py
 ```
 
-What it does:
+This creates:
+- `models/soft_voting_model.pkl`
+- `models/stacking_model.pkl`
+- `models/best_model.pkl`
+- `outputs/reports/ensemble_comparison.csv`
+- `outputs/reports/best_model_test_metrics.json`
+- `outputs/reports/best_model_classification_report.txt`
 
-| Step | Output |
-|------|--------|
-| `basic_info` | Shape, dtypes, first 5 rows printed to console |
-| `check_missing_values` | Missing-value audit printed to console |
-| `class_distribution` | Console table + `outputs/figures/class_distribution.png` |
-| `message_length_analysis` | Console stats + `outputs/figures/message_length_analysis.png` |
-| `top_words_per_class` | Console word lists + `outputs/figures/top_words_per_class.png` |
-
-### Preprocessing
-
+### B. Evaluate the 15-row confidence set
 ```bash
-python src/preprocessing.py
+python .\src\evaluate_confidence.py
 ```
 
-What it does:
+This creates:
+- `outputs/reports/confidence_set_predictions.csv`
+- `outputs/reports/confidence_set_classification_report.txt`
 
-- Loads the raw dataset
-- Runs the full clean → tokenise → remove-stopwords pipeline
-- Prints a sample of raw vs. cleaned messages
-- Performs a stratified 80/20 split and prints split shapes
+### C. Launch the website
+```bash
+streamlit run .\app.py
+```
 
----
+Then open the local URL shown in the terminal.
 
-## Labels
+## Quick terminal test
 
-| Label | Description |
-|-------|-------------|
-| `spam` | Unsolicited commercial or scam messages |
-| `gov`  | Government announcements / alerts |
-| `notif` | Service notifications (banks, apps, etc.) |
-| `otp` | One-time passwords / verification codes |
-| `ads` | Advertisements from legitimate senders |
+```bash
+python .\src\predict.py
+```
 
----
+## Website behavior
 
-## Roadmap
+The web app already has a message input field. The user:
+1. pastes or types a message
+2. clicks **Predict**
+3. sees the predicted message type and confidence scores
 
-- [ ] Feature engineering (TF-IDF, n-grams)
-- [ ] Baseline models (Naive Bayes, Logistic Regression)
-- [ ] Model evaluation & comparison
-- [ ] Hyperparameter tuning
-- [ ] Export trained model to `models/`
+## If installation fails
 
----
+Check your Python version:
+```bash
+python --version
+```
 
-## Contributing
-
-1. Fork the repo.
-2. Create a branch: `git checkout -b feature/your-feature`.
-3. Commit your changes: `git commit -m "Add your feature"`.
-4. Push and open a pull request.
-
----
-
-## License
-
-MIT
+It should say **Python 3.13.x**.
