@@ -160,7 +160,7 @@ def build_and_train():
             epochs=50, 
             batch_size=32,
             validation_split=0.1, 
-            class_weight = {k: v * 0.8 for k, v in class_weights_dict.items()},
+            class_weight=class_weights_dict,
             callbacks=[early_stop, reduce_lr], 
             verbose=0
         )

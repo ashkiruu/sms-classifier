@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 # --- Global Model Loading ---
 # We load these once when the server starts to keep it fast
-ensemble_model = joblib.load(MODELS_DIR / "best_model.pkl")
+ensemble_model = joblib.load(MODELS_DIR / "ensemble_best_model.pkl")
 nn_model = tf.keras.models.load_model(MODELS_DIR / "nn_best_model.keras")
 nn_tokenizer = joblib.load(MODELS_DIR / "nn_tokenizer.pkl")
 nn_le = joblib.load(MODELS_DIR / "nn_label_encoder.pkl")

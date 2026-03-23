@@ -12,7 +12,6 @@
             background-color: #0a0a0a;
             color: #ededed;
         }
-        /* Custom scrollbar for a sleeker look */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0a0a0a; }
         ::-webkit-scrollbar-thumb { background: #262626; border-radius: 4px; }
@@ -43,13 +42,24 @@
             
             <div class="lg:col-span-7 flex flex-col gap-6">
                 <div class="bg-[#121212] border border-neutral-800 p-6 md:p-8 rounded-xl shadow-sm">
-                    <label class="block text-xs font-medium mb-4 text-neutral-500 uppercase tracking-widest">
+                    
+                    <div class="mb-6">
+                        <label class="block text-xs font-medium mb-2 text-neutral-500 uppercase tracking-widest">
+                            Originating Sender
+                        </label>
+                        <input 
+                            type="text" 
+                            id="senderInput" 
+                            class="w-full bg-[#0a0a0a] border border-neutral-800 rounded-lg p-3 text-sm text-neutral-200 placeholder-neutral-600 focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 outline-none transition-all" 
+                            placeholder="e.g., GCash, 0917XXXXXXX, FoodPanda">
+                    </div>
+
+                    <label class="block text-xs font-medium mb-2 text-neutral-500 uppercase tracking-widest">
                         Payload Input
                     </label>
-                    
                     <textarea 
                         id="smsInput" 
-                        class="w-full h-40 md:h-56 bg-[#0a0a0a] border border-neutral-800 rounded-lg p-4 text-sm text-neutral-200 placeholder-neutral-600 focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 outline-none transition-all resize-y" 
+                        class="w-full h-40 md:h-48 bg-[#0a0a0a] border border-neutral-800 rounded-lg p-4 text-sm text-neutral-200 placeholder-neutral-600 focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 outline-none transition-all resize-y" 
                         placeholder="Enter message content for analysis..."></textarea>
                     
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-6 gap-4">
@@ -102,6 +112,7 @@
     <script>
         async function runAnalysis() {
             const text = document.getElementById('smsInput').value;
+            const sender = document.getElementById('senderInput').value; // Added Sender
             const modelType = document.getElementById('modelSelect').value;
             const resultCard = document.getElementById('resultCard');
             const btn = document.querySelector('button');
@@ -120,9 +131,16 @@
                 const response = await fetch('/predict', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text, model_type: modelType })
+                    // Included sender in the payload
+                    body: JSON.stringify({ 
+                        message: text, 
+                        sender: sender || "Unknown", 
+                        model_type: modelType 
+                    })
                 });
                 const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
 
                 // Display Results
                 resultCard.classList.remove('opacity-50');
@@ -134,7 +152,6 @@
                 
                 Object.entries(data.confidence_scores).forEach(([label, score]) => {
                     const percentage = (score * 100).toFixed(1);
-                    // Dynamically set color based on certainty (optional, kept monochromatic here for sleekness)
                     barsContainer.innerHTML += `
                         <div>
                             <div class="flex justify-between text-xs mb-1.5 font-medium">
@@ -148,7 +165,6 @@
                     `;
                 });
 
-                // Trigger animation for the bars
                 setTimeout(() => {
                     barsContainer.querySelectorAll('[data-target]').forEach(bar => {
                         bar.style.width = bar.getAttribute('data-target');
@@ -158,9 +174,8 @@
             } catch (error) {
                 console.error("Analysis failed:", error);
                 document.getElementById('prediction').innerText = "Error";
-                document.getElementById('meaning').innerText = "Connection to classification engine failed.";
+                document.getElementById('meaning').innerText = error.message || "Connection to classification engine failed.";
             } finally {
-                // Restore button state
                 btn.innerText = "Execute Analysis";
                 btn.classList.remove('opacity-70', 'cursor-not-allowed');
                 btn.disabled = false;
