@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import re # Added for Number Normalization
 from pathlib import Path
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -49,14 +50,20 @@ def build_and_train():
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     
     # ==========================================
-    # 1. LOAD & PREPARE DATA (Shared Workflow)
+    # 1. LOAD & PREPARE DATA 
     # ==========================================
     logger.info("Loading dataset using shared preprocessing...")
     df = preprocess_dataframe(load_dataset())
     
-    # Use 'clean_text' to match the ensemble script
     text_col = 'clean_text' if 'clean_text' in df.columns else 'text'
-    X_raw = df[text_col].astype(str).tolist()
+    
+    # --- UPGRADE: Number Normalization ---
+    # Replaces all digits with the token 'NUM' to prevent OTP overfitting
+    def normalize_numbers(text):
+        return re.sub(r'\d+', 'NUM', str(text).lower())
+
+    # Apply the normalization to the raw text before tokenizing
+    X_raw = [normalize_numbers(t) for t in df[text_col]]
     
     # Tokenization
     MAX_WORDS = 5000
@@ -70,7 +77,7 @@ def build_and_train():
     y = le.fit_transform(df['label'])
     NUM_CLASSES = len(le.classes_)
 
-    # Data Splitting (Matching groupmate's 80/20 split)
+    # Data Splitting
     X_train, X_test, y_train, y_test = train_test_split(
         X_seq, y, test_size=0.20, stratify=y, random_state=42
     )
@@ -92,7 +99,6 @@ def build_and_train():
     best_model = None
     best_init_name = ""
 
-    # Updated Callbacks: Added learning rate reduction for smoother convergence
     early_stop = EarlyStopping(monitor='val_loss', patience=6, restore_best_weights=True)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, min_lr=0.0001)
 
@@ -100,17 +106,52 @@ def build_and_train():
         tf.keras.backend.clear_session()
         logger.info(f"🚀 Training NN with {name} Initialization")
 
-        # UPGRADED ARCHITECTURE: Stacked LSTMs with Advanced Regularization
-        model = tf.keras.Sequential([
-            tf.keras.layers.Embedding(MAX_WORDS, 64, input_length=MAX_LEN), 
-            tf.keras.layers.SpatialDropout1D(0.2), # Upgrade: Prevents embedding overfitting
-            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True)), # Upgrade: Layer 1
-            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(16)), # Upgrade: Layer 2
-            tf.keras.layers.Dense(32, activation='relu', kernel_initializer=init_method, kernel_regularizer=l2(0.01)), # Upgrade: L2 Regularization
-            tf.keras.layers.Dropout(0.5), 
-            tf.keras.layers.Dense(16, activation='relu', kernel_initializer=init_method),
-            tf.keras.layers.Dense(NUM_CLASSES, activation='softmax', kernel_initializer=init_method)
-        ])
+        # --- IMPROVED HYBRID POOLING ARCHITECTURE ---
+        inputs = tf.keras.Input(shape=(MAX_LEN,))
+
+        x = tf.keras.layers.Embedding(MAX_WORDS, 64)(inputs)
+        x = tf.keras.layers.SpatialDropout1D(0.3)(x)
+
+        # BiLSTM layers (with dropout to reduce overfitting)
+        x = tf.keras.layers.Bidirectional(
+            tf.keras.layers.LSTM(32, return_sequences=True, dropout=0.2, recurrent_dropout=0.2)
+        )(x)
+
+        x = tf.keras.layers.Bidirectional(
+            tf.keras.layers.LSTM(16, return_sequences=True, dropout=0.2, recurrent_dropout=0.2)
+        )(x)
+
+        # 🔥 Combine Max + Average Pooling (CRITICAL FIX)
+        max_pool = tf.keras.layers.GlobalMaxPooling1D()(x)
+        avg_pool = tf.keras.layers.GlobalAveragePooling1D()(x)
+
+        x = tf.keras.layers.Concatenate()([max_pool, avg_pool])
+
+        # Dense layers
+        x = tf.keras.layers.BatchNormalization()(x)
+
+        x = tf.keras.layers.Dense(
+            32,
+            activation='relu',
+            kernel_initializer=init_method,
+            kernel_regularizer=l2(0.005)
+        )(x)
+
+        x = tf.keras.layers.Dropout(0.5)(x)
+
+        x = tf.keras.layers.Dense(
+            16,
+            activation='relu',
+            kernel_initializer=init_method
+        )(x)
+
+        outputs = tf.keras.layers.Dense(
+            NUM_CLASSES,
+            activation='softmax',
+            kernel_initializer=init_method
+        )(x)
+
+        model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
         model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
@@ -119,8 +160,8 @@ def build_and_train():
             epochs=50, 
             batch_size=32,
             validation_split=0.1, 
-            class_weight=class_weights_dict,
-            callbacks=[early_stop, reduce_lr], # Applied new callback
+            class_weight = {k: v * 0.8 for k, v in class_weights_dict.items()},
+            callbacks=[early_stop, reduce_lr], 
             verbose=0
         )
 

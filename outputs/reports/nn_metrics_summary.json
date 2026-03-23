@@ -3,15 +3,15 @@
   "test_results": [
     {
       "Initialization": "Xavier",
-      "Accuracy": 0.9331395348837209,
-      "F1_Macro": 0.8697297544047308,
-      "Kappa": 0.8877093386318479
+      "Accuracy": 0.9549418604651163,
+      "F1_Macro": 0.8984466465575822,
+      "Kappa": 0.9244537169210497
     },
     {
       "Initialization": "Heuristic",
-      "Accuracy": 0.6177325581395349,
-      "F1_Macro": 0.31367460268668956,
-      "Kappa": 0.388411371633109
+      "Accuracy": 0.5915697674418605,
+      "F1_Macro": 0.148675799086758,
+      "Kappa": 0.0
     },
     {
       "Initialization": "Random",
