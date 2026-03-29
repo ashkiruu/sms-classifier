@@ -83,7 +83,7 @@ def predict_with_ensemble(message: str, sender: str = "unknown") -> dict:
 
 def predict_with_nn(message: str, sender: str = "unknown") -> dict:
     try:
-        model, tokenizer, label_encoder = get_nn_components()
+        model, tokenizer_bundle, label_encoder = get_nn_components()
         from tensorflow.keras.preprocessing.sequence import pad_sequences
     except Exception as exc:
         return {
@@ -96,11 +96,47 @@ def predict_with_nn(message: str, sender: str = "unknown") -> dict:
             "confidence_scores": {},
         }
 
+    def _normalize_numbers(text: str) -> str:
+        import re
+        return re.sub(r"\d+", "NUM", str(text).lower()).strip()
+
+    def _clean_sender_text(text: str) -> str:
+        import re
+        text = _normalize_numbers(text)
+        text = re.sub(r"[^a-z0-9_@.+\-\s]", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text if text else "unknown"
+
+    def _clean_message_text(text: str) -> str:
+        import re
+        text = _normalize_numbers(text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text if text else "empty"
+
     model_input = build_model_input(message=message, sender=sender)
-    sequences = tokenizer.texts_to_sequences([model_input])
-    max_len = model.input_shape[1] if isinstance(model.input_shape, tuple) else 100
-    padded = pad_sequences(sequences, maxlen=max_len, padding="post")
-    probabilities = model.predict(padded, verbose=0)[0]
+
+    sender_tokenizer = tokenizer_bundle["sender_tokenizer"]
+    message_tokenizer = tokenizer_bundle["message_tokenizer"]
+    sender_max_len = tokenizer_bundle["sender_max_len"]
+    message_max_len = tokenizer_bundle["message_max_len"]
+
+    sender_text = _clean_sender_text(sender)
+    message_text = _clean_message_text(message)
+
+    sender_seq = sender_tokenizer.texts_to_sequences([sender_text])
+    message_seq = message_tokenizer.texts_to_sequences([message_text])
+
+    sender_padded = pad_sequences(sender_seq, maxlen=sender_max_len, padding="post", truncating="post")
+    message_padded = pad_sequences(message_seq, maxlen=message_max_len, padding="post", truncating="post")
+
+    probabilities = model.predict(
+        {
+            "sender_input": sender_padded,
+            "message_input": message_padded,
+        },
+        verbose=0,
+    )[0]
+
     pred_idx = int(np.argmax(probabilities))
     prediction = label_encoder.inverse_transform([pred_idx])[0]
     labels = label_encoder.classes_.tolist()

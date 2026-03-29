@@ -61,8 +61,8 @@ def main() -> None:
 
     if df["nn_available"].all():
         nn_acc = accuracy_score(true_labels, df["nn_prediction"].tolist())
-        get_report_path("confidence_set_predictions.csv").write_text(df.to_csv(index=False), encoding="utf-8")
-        get_report_path("confidence_set_classification_report.txt").write_text(
+        get_report_path("nn_confidence_set_predictions.csv").write_text(df.to_csv(index=False), encoding="utf-8")
+        get_report_path("nn_confidence_set_classification_report.txt").write_text(
             classification_report(true_labels, df["nn_prediction"].tolist(), digits=4),
             encoding="utf-8",
         )

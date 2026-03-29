@@ -1,23 +1,24 @@
 {
   "best_initialization": "Xavier",
+  "feature_strategy": "dual-input sender+message with sender embedding and BiGRU message encoder",
   "test_results": [
     {
       "Initialization": "Xavier",
-      "Accuracy": 0.9563953488372093,
-      "F1_Macro": 0.9183812370294484,
-      "Kappa": 0.9260302544860285
+      "Accuracy": 0.9767441860465116,
+      "F1_Macro": 0.9440595172238175,
+      "Kappa": 0.9604478362724386
     },
     {
-      "Initialization": "Heuristic",
-      "Accuracy": 0.11627906976744186,
-      "F1_Macro": 0.06418566100290095,
-      "Kappa": 0.04139625270413971
+      "Initialization": "He",
+      "Accuracy": 0.1875,
+      "F1_Macro": 0.06315789473684211,
+      "Kappa": 0.0
     },
     {
       "Initialization": "Random",
-      "Accuracy": 0.5392441860465116,
-      "F1_Macro": 0.14324324324324325,
-      "Kappa": -0.007576597553313302
+      "Accuracy": 0.2311046511627907,
+      "F1_Macro": 0.15305039787798408,
+      "Kappa": 0.08085037604238754
     }
   ]
 }

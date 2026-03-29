@@ -35,8 +35,19 @@ def about():
 def metrics():
     ensemble_metrics = load_json_report("best_model_test_metrics.json", default={})
     nn_metrics = load_json_report("nn_metrics_summary.json", default={})
-    return render_template("metrics.html", ensemble_metrics=ensemble_metrics, nn_metrics=nn_metrics)
 
+    nn_report_path = Path(__file__).resolve().parent / "outputs" / "reports" / "nn_best_model_report.txt"
+    if nn_report_path.exists():
+        nn_classification_report = nn_report_path.read_text(encoding="utf-8")
+    else:
+        nn_classification_report = ""
+
+    return render_template(
+        "metrics.html",
+        ensemble_metrics=ensemble_metrics,
+        nn_metrics=nn_metrics,
+        nn_classification_report=nn_classification_report,
+    )
 
 @app.route("/api/predict", methods=["POST"])
 def api_predict():

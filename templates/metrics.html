@@ -12,10 +12,13 @@
         {% if ensemble_metrics.test_metrics %}
             <div class="stat">{{ '%.2f'|format(ensemble_metrics.test_metrics.accuracy * 100) }}%</div>
             <p class="muted">Test accuracy</p>
+
             <div class="stat">{{ '%.2f'|format(ensemble_metrics.test_metrics.f1_macro * 100) }}%</div>
             <p class="muted">Macro F1</p>
+
             <p class="muted"><strong>Best model:</strong> {{ ensemble_metrics.best_model }}</p>
             <p class="muted"><strong>Features:</strong> {{ ensemble_metrics.feature_strategy or 'Not provided' }}</p>
+
             <pre style="white-space:pre-wrap; color:#dfe6ff; background:#0d1328; border-radius:12px; padding:14px; border:1px solid var(--border);">{{ ensemble_metrics.test_metrics.classification_report }}</pre>
         {% else %}
             <p class="muted">No ensemble metrics found yet. Run <code>python src/train_ensemble.py</code>.</p>
@@ -27,6 +30,7 @@
         {% if nn_metrics.test_results %}
             <p class="muted"><strong>Best initializer:</strong> {{ nn_metrics.best_initialization }}</p>
             <p class="muted"><strong>Features:</strong> {{ nn_metrics.feature_strategy or 'Not provided' }}</p>
+
             {% for row in nn_metrics.test_results %}
                 <div style="padding:12px 0; border-top:1px solid var(--border);">
                     <div class="kv"><span>{{ row.Initialization }}</span><strong>{{ '%.2f'|format(row.Accuracy * 100) }}% acc</strong></div>
@@ -34,9 +38,44 @@
                     <div class="kv"><span>Kappa</span><strong>{{ '%.3f'|format(row.Kappa) }}</strong></div>
                 </div>
             {% endfor %}
+
+            {% if nn_classification_report %}
+                <pre style="white-space:pre-wrap; color:#dfe6ff; background:#0d1328; border-radius:12px; padding:14px; border:1px solid var(--border); margin-top:14px;">{{ nn_classification_report }}</pre>
+            {% endif %}
         {% else %}
             <p class="muted">No neural-network metrics found yet. Run <code>python src/train_nn.py</code> after installing TensorFlow.</p>
         {% endif %}
     </div>
+</section>
+
+<section class="card" style="margin-top:24px;">
+    <h2 class="section-title">Applications of the Results</h2>
+    <p class="muted">
+        The evaluation results show that both models can be used in practical SMS classification tasks, especially for filtering and organizing incoming messages based on their content and sender.
+    </p>
+
+    <ul class="list">
+        <li>
+            <strong>Spam detection:</strong> Messages predicted as spam can be flagged early to help users avoid scams, phishing attempts, and unwanted promotions.
+        </li>
+        <li>
+            <strong>Automatic SMS categorization:</strong> The models can sort messages into categories such as ads, OTP, notifications, government messages, and spam for easier inbox management.
+        </li>
+        <li>
+            <strong>Fraud awareness support:</strong> Since the system considers both sender and message content, it can help identify suspicious sender-message combinations that may look legitimate at first glance.
+        </li>
+        <li>
+            <strong>Priority message handling:</strong> Important messages such as OTPs and trusted notifications can be separated from low-priority or risky messages.
+        </li>
+        <li>
+            <strong>Decision support for users:</strong> Confidence scores and interpretations can help users understand why a message may be risky or safe before taking action.
+        </li>
+        <li>
+            <strong>Integration into mobile or web tools:</strong> These results suggest the models can be embedded into messaging dashboards, security tools, or SMS screening applications.
+        </li>
+        <li>
+            <strong>Model comparison for deployment:</strong> Since both the Ensemble and Neural Network are shown separately, developers can compare which model is more stable, accurate, and practical for real-world use.
+        </li>
+    </ul>
 </section>
 {% endblock %}

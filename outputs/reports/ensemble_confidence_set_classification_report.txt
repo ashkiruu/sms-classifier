@@ -1,11 +1,11 @@
               precision    recall  f1-score   support
 
          ads     1.0000    1.0000    1.0000         4
-         gov     1.0000    0.3333    0.5000         3
-      notifs     0.6000    1.0000    0.7500         3
+         gov     1.0000    0.6667    0.8000         3
+      notifs     0.7500    1.0000    0.8571         3
          otp     1.0000    1.0000    1.0000         2
         spam     1.0000    1.0000    1.0000         3
 
-    accuracy                         0.8667        15
-   macro avg     0.9200    0.8667    0.8500        15
-weighted avg     0.9200    0.8667    0.8500        15
+    accuracy                         0.9333        15
+   macro avg     0.9500    0.9333    0.9314        15
+weighted avg     0.9500    0.9333    0.9314        15
