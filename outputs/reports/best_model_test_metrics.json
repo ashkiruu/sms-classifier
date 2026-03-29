@@ -1,5 +1,6 @@
 {
   "best_model": "soft_voting",
+  "feature_strategy": "sender-aware combined text with word+character TF-IDF feature unions",
   "train_sub_rows": 2200,
   "validation_rows": 551,
   "train_full_rows": 2751,
@@ -7,18 +8,18 @@
   "validation_comparison": [
     {
       "model": "soft_voting",
-      "validation_accuracy": 0.9582577132486388,
-      "validation_f1_macro": 0.9414201221982447
+      "validation_accuracy": 0.969147005444646,
+      "validation_f1_macro": 0.9535116620793056
     },
     {
       "model": "stacking",
-      "validation_accuracy": 0.9401088929219601,
-      "validation_f1_macro": 0.8668933807952486
+      "validation_accuracy": 0.9582577132486388,
+      "validation_f1_macro": 0.9357997831316635
     }
   ],
   "test_metrics": {
-    "accuracy": 0.9622093023255814,
-    "f1_macro": 0.9201298314338441,
-    "classification_report": "              precision    recall  f1-score   support\n\n         ads     0.8824    0.8571    0.8696        35\n         gov     0.8571    0.8000    0.8276        15\n      notifs     0.9661    0.9803    0.9732       407\n         otp     0.9524    0.9804    0.9662       102\n        spam     0.9918    0.9380    0.9641       129\n\n    accuracy                         0.9622       688\n   macro avg     0.9300    0.9112    0.9201       688\nweighted avg     0.9623    0.9622    0.9620       688\n"
+    "accuracy": 0.9781976744186046,
+    "f1_macro": 0.9635064211151452,
+    "classification_report": "              precision    recall  f1-score   support\n\n         ads     0.9688    0.8857    0.9254        35\n         gov     1.0000    0.9333    0.9655        15\n      notifs     0.9783    0.9951    0.9866       407\n         otp     0.9604    0.9510    0.9557       102\n        spam     0.9921    0.9767    0.9844       129\n\n    accuracy                         0.9782       688\n   macro avg     0.9799    0.9484    0.9635       688\nweighted avg     0.9782    0.9782    0.9780       688\n"
   }
 }

@@ -1,4 +1,4 @@
-"""Text cleaning and dataset loading utilities for the SMS classifier."""
+"""Text cleaning, feature preparation, and dataset loading utilities."""
 from __future__ import annotations
 
 import re
@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split
 try:
     import nltk
     from nltk.corpus import stopwords
+
     try:
         nltk.data.find("corpora/stopwords")
     except LookupError:
@@ -19,6 +20,7 @@ try:
             nltk.download("stopwords", quiet=True)
         except Exception:
             pass
+
     try:
         _ENGLISH_STOPWORDS = set(stopwords.words("english"))
     except LookupError:
@@ -29,14 +31,12 @@ except Exception:
     _ENGLISH_STOPWORDS = set()
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from utils import setup_logger, DEFAULT_TRAIN_DATA
+from utils import DEFAULT_TRAIN_DATA, setup_logger
 
 logger = setup_logger(__name__)
 
 if not _NLTK_AVAILABLE or not _ENGLISH_STOPWORDS:
-    logger.warning(
-        "NLTK stopwords unavailable; continuing with Tagalog stopwords only."
-    )
+    logger.warning("NLTK stopwords unavailable; continuing with Tagalog stopwords only.")
 
 TAGALOG_STOPWORDS: set[str] = {
     "ang", "ng", "mga", "na", "sa", "at", "ay", "ko", "mo", "ka",
@@ -67,8 +67,12 @@ def load_dataset(filepath: str | Path = DEFAULT_TRAIN_DATA) -> pd.DataFrame:
         low = str(col).strip().lower()
         if low in {"text", "message", "sms", "body"}:
             rename_map[col] = "message"
+        elif low in {"sender", "from", "origin", "source"}:
+            rename_map[col] = "sender"
         elif low in {"category", "label", "class", "target"}:
             rename_map[col] = "label"
+        elif low == "date":
+            rename_map[col] = "date"
     df = df.rename(columns=rename_map)
 
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
@@ -76,7 +80,13 @@ def load_dataset(filepath: str | Path = DEFAULT_TRAIN_DATA) -> pd.DataFrame:
         raise ValueError(f"Dataset must contain columns {REQUIRED_COLUMNS}. Missing: {missing}")
 
     df = df.copy()
+    if "sender" not in df.columns:
+        df["sender"] = "unknown"
+    if "date" not in df.columns:
+        df["date"] = ""
+
     df["message"] = df["message"].astype(str)
+    df["sender"] = df["sender"].fillna("unknown").astype(str)
     df["label"] = df["label"].astype(str).str.strip().str.lower().replace({"notif": "notifs"})
     df = df[df["message"].str.strip() != ""].dropna(subset=["message", "label"]).reset_index(drop=True)
     return df
@@ -93,11 +103,22 @@ def clean_text(text: str, keep_numbers: bool = True) -> str:
     return text
 
 
+def normalize_sender(sender: str) -> str:
+    sender = str(sender or "unknown").strip().lower()
+    sender = re.sub(r"[^a-z0-9]+", " ", sender)
+    sender = re.sub(r"\s+", " ", sender).strip()
+    return sender or "unknown"
+
+
 def tokenize_text(text: str) -> list[str]:
     return [token for token in text.split() if len(token) > 1]
 
 
-def remove_stopwords(tokens: list[str], include_tagalog: bool = True, extra_stopwords: Optional[set[str]] = None) -> list[str]:
+def remove_stopwords(
+    tokens: list[str],
+    include_tagalog: bool = True,
+    extra_stopwords: Optional[set[str]] = None,
+) -> list[str]:
     stop = set(_ENGLISH_STOPWORDS)
     if include_tagalog:
         stop.update(TAGALOG_STOPWORDS)
@@ -106,17 +127,39 @@ def remove_stopwords(tokens: list[str], include_tagalog: bool = True, extra_stop
     return [t for t in tokens if t not in stop]
 
 
-def preprocess_text(text: str, keep_numbers: bool = True, include_tagalog: bool = True, extra_stopwords: Optional[set[str]] = None) -> str:
+def preprocess_text(
+    text: str,
+    keep_numbers: bool = True,
+    include_tagalog: bool = True,
+    extra_stopwords: Optional[set[str]] = None,
+) -> str:
     cleaned = clean_text(text, keep_numbers=keep_numbers)
     tokens = tokenize_text(cleaned)
     filtered = remove_stopwords(tokens, include_tagalog=include_tagalog, extra_stopwords=extra_stopwords)
     return " ".join(filtered)
 
 
-def preprocess_dataframe(df: pd.DataFrame, text_column: str = "message", keep_numbers: bool = True, include_tagalog: bool = True, extra_stopwords: Optional[set[str]] = None) -> pd.DataFrame:
+def build_model_input(message: str, sender: str = "unknown") -> str:
+    sender_token = normalize_sender(sender).replace(" ", "_")
+    cleaned_message = preprocess_text(message)
+    return f"sender_{sender_token} {cleaned_message}".strip()
+
+
+def preprocess_dataframe(
+    df: pd.DataFrame,
+    text_column: str = "message",
+    sender_column: str = "sender",
+    keep_numbers: bool = True,
+    include_tagalog: bool = True,
+    extra_stopwords: Optional[set[str]] = None,
+) -> pd.DataFrame:
     if text_column not in df.columns:
         raise KeyError(f"Column '{text_column}' not found in DataFrame.")
+
     out = df.copy()
+    if sender_column not in out.columns:
+        out[sender_column] = "unknown"
+
     out["clean_text"] = out[text_column].astype(str).apply(
         lambda x: preprocess_text(
             x,
@@ -125,10 +168,21 @@ def preprocess_dataframe(df: pd.DataFrame, text_column: str = "message", keep_nu
             extra_stopwords=extra_stopwords,
         )
     )
+    out["clean_sender"] = out[sender_column].astype(str).apply(normalize_sender)
+    out["model_input"] = out.apply(
+        lambda row: build_model_input(row[text_column], row[sender_column]),
+        axis=1,
+    )
     return out
 
 
-def split_data(df: pd.DataFrame, text_column: str = "clean_text", target_column: str = "label", test_size: float = 0.2, random_state: int = 42):
+def split_data(
+    df: pd.DataFrame,
+    text_column: str = "model_input",
+    target_column: str = "label",
+    test_size: float = 0.2,
+    random_state: int = 42,
+):
     if text_column not in df.columns or target_column not in df.columns:
         raise KeyError(f"Expected columns '{text_column}' and '{target_column}'.")
     y = df[target_column]
@@ -142,7 +196,7 @@ def run_preprocessing(filepath: str | Path = DEFAULT_TRAIN_DATA) -> None:
     processed = preprocess_dataframe(df)
     x_train, x_test, y_train, y_test = split_data(processed)
     print("\nSample preprocessing preview:\n")
-    preview = processed[["message", "clean_text", "label"]].head(10)
+    preview = processed[["sender", "message", "clean_text", "clean_sender", "model_input", "label"]].head(10)
     print(preview.to_string(index=False))
     print("\nTrain/Test split sizes:")
     print(f"X_train: {x_train.shape[0]}")

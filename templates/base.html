@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or 'SMS Security Classifier' }}</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: #111831;
+            --panel-2: #17213f;
+            --text: #f4f7fb;
+            --muted: #aab6d3;
+            --accent: #7c9bff;
+            --accent-2: #66d1b0;
+            --danger: #ff7a7a;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, Arial, sans-serif;
+            background: linear-gradient(180deg, #0b1020 0%, #0e1630 100%);
+            color: var(--text);
+            line-height: 1.55;
+        }
+        a { color: inherit; text-decoration: none; }
+        .container { width: min(1120px, 92vw); margin: 0 auto; }
+        .nav {
+            position: sticky; top: 0; z-index: 10;
+            backdrop-filter: blur(10px);
+            background: rgba(11,16,32,0.8);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 0;
+        }
+        .brand { font-weight: 700; letter-spacing: .04em; }
+        .brand span { color: var(--accent-2); }
+        .nav-links { display: flex; gap: 18px; color: var(--muted); font-size: 14px; }
+        .hero { padding: 48px 0 24px; }
+        .hero h1 { margin: 0 0 14px; font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1.05; }
+        .hero p { color: var(--muted); max-width: 780px; }
+        .grid { display: grid; gap: 22px; }
+        .grid-2 { grid-template-columns: 1.1fr .9fr; }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 22px;
+            box-shadow: 0 12px 40px rgba(0,0,0,.18);
+        }
+        .section-title { margin-top: 0; margin-bottom: 8px; font-size: 1.15rem; }
+        .muted { color: var(--muted); }
+        label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--muted); }
+        input, textarea {
+            width: 100%; padding: 14px 15px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--panel);
+            color: var(--text); font: inherit;
+        }
+        textarea { min-height: 160px; resize: vertical; }
+        .btn {
+            border: 0; border-radius: 12px; padding: 13px 18px; cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), #5a7df7);
+            color: white; font-weight: 700;
+        }
+        .btn:disabled { opacity: .65; cursor: not-allowed; }
+        .chip {
+            display: inline-flex; align-items: center; gap: 8px; padding: 7px 10px;
+            border-radius: 999px; background: rgba(124,155,255,.12); color: #d9e2ff; font-size: 13px;
+            border: 1px solid rgba(124,155,255,.25);
+        }
+        .result-title { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom: 12px; }
+        .prediction { font-size: 1.7rem; font-weight: 800; margin: 8px 0 6px; }
+        .confidence-list { display: grid; gap: 12px; margin-top: 14px; }
+        .bar-wrap { background: #0d1328; border-radius: 999px; height: 10px; overflow: hidden; }
+        .bar { height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+        .kv { display:grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 14px; }
+        .stat { font-size: 1.8rem; font-weight: 800; margin: 10px 0 4px; }
+        .list { margin: 0; padding-left: 18px; color: var(--muted); }
+        .footer { padding: 28px 0 40px; color: var(--muted); font-size: 13px; }
+        @media (max-width: 860px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .nav-inner { flex-direction: column; gap: 12px; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="container nav-inner">
+            <a class="brand" href="/">SMS <span>Security Classifier</span></a>
+            <div class="nav-links">
+                <a href="/">Analyzer</a>
+                <a href="/about">About</a>
+                <a href="/metrics">Metrics</a>
+            </div>
+        </div>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    <div class="container footer">
+        Flask-based course project with separate Ensemble and Neural Network outputs.
+    </div>
+</body>
+</html>

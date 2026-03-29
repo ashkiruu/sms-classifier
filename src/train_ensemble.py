@@ -1,11 +1,10 @@
-"""Train and compare soft-voting and stacking ensembles for SMS classification.
+"""Train and compare sender-aware ensemble models for SMS classification.
 
-Workflow:
-1. Main dataset is split into train_full and held-out test.
-2. train_full is split again into train_sub and validation.
-3. Soft voting and stacking are fit on train_sub and compared on validation.
-4. The better model is retrained on train_full and evaluated on test.
-5. Both ensemble variants plus the best model are saved.
+Key upgrade:
+- Uses the sender field as an additional signal by prepending a normalized
+  sender token to the cleaned message.
+- Uses richer TF-IDF feature unions (word + character n-grams) for the
+  strongest linear models.
 """
 from __future__ import annotations
 
@@ -27,8 +26,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.metrics import accuracy_score, classification_report, f1_score
 from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import Pipeline
+from sklearn.naive_bayes import ComplementNB
+from sklearn.pipeline import FeatureUnion, Pipeline
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from preprocessing import load_dataset, preprocess_dataframe
@@ -40,36 +39,90 @@ TEST_SIZE = 0.2
 VALIDATION_SIZE = 0.2
 
 
+def build_union_vectorizer() -> FeatureUnion:
+    return FeatureUnion([
+        (
+            "word",
+            TfidfVectorizer(
+                lowercase=True,
+                ngram_range=(1, 2),
+                min_df=1,
+                max_features=10000,
+                sublinear_tf=True,
+            ),
+        ),
+        (
+            "char",
+            TfidfVectorizer(
+                lowercase=True,
+                analyzer="char_wb",
+                ngram_range=(3, 5),
+                min_df=1,
+                max_features=12000,
+                sublinear_tf=True,
+            ),
+        ),
+    ])
+
+
 def build_base_pipelines():
-    nb = Pipeline([
-        ("tfidf", TfidfVectorizer(lowercase=True, ngram_range=(1, 2), min_df=1, max_features=8000, sublinear_tf=True)),
-        ("clf", MultinomialNB(alpha=0.5)),
+    cnb = Pipeline([
+        (
+            "tfidf",
+            TfidfVectorizer(
+                lowercase=True,
+                ngram_range=(1, 2),
+                min_df=1,
+                max_features=10000,
+                sublinear_tf=True,
+            ),
+        ),
+        ("clf", ComplementNB(alpha=0.3)),
     ])
+
     lr = Pipeline([
-        ("tfidf", TfidfVectorizer(lowercase=True, ngram_range=(1, 2), min_df=1, max_features=8000, sublinear_tf=True)),
-        ("clf", LogisticRegression(max_iter=2000, class_weight="balanced", random_state=RANDOM_STATE)),
+        ("tfidf", build_union_vectorizer()),
+        (
+            "clf",
+            LogisticRegression(
+                max_iter=2500,
+                class_weight="balanced",
+                random_state=RANDOM_STATE,
+            ),
+        ),
     ])
+
     sgd = Pipeline([
-        ("tfidf", TfidfVectorizer(lowercase=True, analyzer="char_wb", ngram_range=(3, 5), min_df=1, max_features=12000, sublinear_tf=True)),
-        ("clf", SGDClassifier(loss="log_loss", class_weight="balanced", random_state=RANDOM_STATE, max_iter=2000, tol=1e-3)),
+        ("tfidf", build_union_vectorizer()),
+        (
+            "clf",
+            SGDClassifier(
+                loss="modified_huber",
+                alpha=1e-5,
+                class_weight="balanced",
+                random_state=RANDOM_STATE,
+                max_iter=2500,
+                tol=1e-3,
+            ),
+        ),
     ])
-    return nb, lr, sgd
+    return cnb, lr, sgd
 
 
 def build_soft_voting():
-    nb, lr, sgd = build_base_pipelines()
+    cnb, lr, sgd = build_base_pipelines()
     return VotingClassifier(
-        estimators=[("nb", nb), ("lr", lr), ("sgd", sgd)],
+        estimators=[("cnb", cnb), ("lr", lr), ("sgd", sgd)],
         voting="soft",
         weights=[1, 2, 2],
     )
 
 
 def build_stacking():
-    nb, lr, sgd = build_base_pipelines()
-    final_estimator = LogisticRegression(max_iter=2000, class_weight="balanced", random_state=RANDOM_STATE)
+    cnb, lr, sgd = build_base_pipelines()
+    final_estimator = LogisticRegression(max_iter=2500, class_weight="balanced", random_state=RANDOM_STATE)
     return StackingClassifier(
-        estimators=[("nb", nb), ("lr", lr), ("sgd", sgd)],
+        estimators=[("cnb", cnb), ("lr", lr), ("sgd", sgd)],
         final_estimator=final_estimator,
         stack_method="predict_proba",
         passthrough=False,
@@ -90,7 +143,7 @@ def evaluate_model(model, X_eval, y_eval) -> dict:
 def main() -> None:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     df = preprocess_dataframe(load_dataset())
-    X = df["clean_text"]
+    X = df["model_input"]
     y = df["label"]
 
     stratify = y if y.value_counts().min() >= 2 else None
@@ -122,11 +175,13 @@ def main() -> None:
         fitted = clone(model)
         fitted.fit(X_train_sub, y_train_sub)
         metrics = evaluate_model(fitted, X_val, y_val)
-        comparison_rows.append({
-            "model": name,
-            "validation_accuracy": metrics["accuracy"],
-            "validation_f1_macro": metrics["f1_macro"],
-        })
+        comparison_rows.append(
+            {
+                "model": name,
+                "validation_accuracy": metrics["accuracy"],
+                "validation_f1_macro": metrics["f1_macro"],
+            }
+        )
 
     comparison = pd.DataFrame(comparison_rows).sort_values(
         ["validation_f1_macro", "validation_accuracy"], ascending=False
@@ -147,12 +202,14 @@ def main() -> None:
         joblib.dump(fitted, model_path)
         logger.info("Saved %s to %s", name, model_path)
 
-    best_path = MODELS_DIR / "best_model.pkl"
+    best_path = MODELS_DIR / "ensemble_best_model.pkl"
     joblib.dump(best_model, best_path)
+    joblib.dump(best_model, MODELS_DIR / "best_model.pkl")
     logger.info("Saved best model (%s) to %s", best_name, best_path)
 
     metrics = {
         "best_model": best_name,
+        "feature_strategy": "sender-aware combined text with word+character TF-IDF feature unions",
         "train_sub_rows": int(len(X_train_sub)),
         "validation_rows": int(len(X_val)),
         "train_full_rows": int(len(X_train_full)),
@@ -160,8 +217,8 @@ def main() -> None:
         "validation_comparison": comparison.to_dict(orient="records"),
         "test_metrics": test_metrics,
     }
-    get_report_path("best_model_test_metrics.json").write_text(json.dumps(metrics, indent=2))
-    get_report_path("best_model_classification_report.txt").write_text(test_metrics["classification_report"])
+    get_report_path("best_model_test_metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    get_report_path("best_model_classification_report.txt").write_text(test_metrics["classification_report"], encoding="utf-8")
 
     print("\nSplit summary:")
     print(f"Train sub rows : {len(X_train_sub)}")

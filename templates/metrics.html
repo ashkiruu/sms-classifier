@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="hero">
+    <span class="chip">Metrics and reports</span>
+    <h1>Model evaluation summary</h1>
+    <p>These values are loaded from the generated report files in <code>outputs/reports</code>.</p>
+</section>
+
+<section class="grid grid-2">
+    <div class="card">
+        <h2 class="section-title">Ensemble</h2>
+        {% if ensemble_metrics.test_metrics %}
+            <div class="stat">{{ '%.2f'|format(ensemble_metrics.test_metrics.accuracy * 100) }}%</div>
+            <p class="muted">Test accuracy</p>
+            <div class="stat">{{ '%.2f'|format(ensemble_metrics.test_metrics.f1_macro * 100) }}%</div>
+            <p class="muted">Macro F1</p>
+            <p class="muted"><strong>Best model:</strong> {{ ensemble_metrics.best_model }}</p>
+            <p class="muted"><strong>Features:</strong> {{ ensemble_metrics.feature_strategy or 'Not provided' }}</p>
+            <pre style="white-space:pre-wrap; color:#dfe6ff; background:#0d1328; border-radius:12px; padding:14px; border:1px solid var(--border);">{{ ensemble_metrics.test_metrics.classification_report }}</pre>
+        {% else %}
+            <p class="muted">No ensemble metrics found yet. Run <code>python src/train_ensemble.py</code>.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">Neural Network</h2>
+        {% if nn_metrics.test_results %}
+            <p class="muted"><strong>Best initializer:</strong> {{ nn_metrics.best_initialization }}</p>
+            <p class="muted"><strong>Features:</strong> {{ nn_metrics.feature_strategy or 'Not provided' }}</p>
+            {% for row in nn_metrics.test_results %}
+                <div style="padding:12px 0; border-top:1px solid var(--border);">
+                    <div class="kv"><span>{{ row.Initialization }}</span><strong>{{ '%.2f'|format(row.Accuracy * 100) }}% acc</strong></div>
+                    <div class="kv"><span>Macro F1</span><strong>{{ '%.2f'|format(row.F1_Macro * 100) }}%</strong></div>
+                    <div class="kv"><span>Kappa</span><strong>{{ '%.3f'|format(row.Kappa) }}</strong></div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="muted">No neural-network metrics found yet. Run <code>python src/train_nn.py</code> after installing TensorFlow.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="hero">
+    <span class="chip">Project overview</span>
+    <h1>About the SMS security classification project</h1>
+    <p>
+        The project addresses SMS fraud and message triage by classifying incoming texts into
+        <strong>ads</strong>, <strong>gov</strong>, <strong>notifs</strong>, <strong>otp</strong>, and <strong>spam</strong>.
+        The web application is built with <strong>Flask only</strong> and integrates both an ensemble classifier and a neural network.
+    </p>
+</section>
+
+<section class="grid grid-3">
+    <div class="card">
+        <h2 class="section-title">Problem</h2>
+        <p class="muted">Users often receive mixed Tagalog-English SMS messages where scam, OTP, government, and promotional content can look similar. A classifier helps flag risky messages and support better decision making.</p>
+    </div>
+    <div class="card">
+        <h2 class="section-title">Dataset</h2>
+        <p class="muted">The dataset includes sender, message body, and class label. The upgraded preprocessing pipeline now preserves sender identity as a normalized token so the model can learn source-level patterns.</p>
+    </div>
+    <div class="card">
+        <h2 class="section-title">Output</h2>
+        <p class="muted">The app returns both model predictions separately, along with a class interpretation and confidence breakdown per label.</p>
+    </div>
+</section>
+
+<section class="grid grid-2" style="margin-top:24px; align-items:start;">
+    <div class="card">
+        <h2 class="section-title">Model improvements made</h2>
+        <ul class="list">
+            <li>Added <strong>sender-aware input engineering</strong> by prepending a normalized sender token to the cleaned message.</li>
+            <li>Strengthened the ensemble with <strong>word TF-IDF + character TF-IDF feature unions</strong> for linear models.</li>
+            <li>Standardized file names and inference helpers so training and deployment use the same saved model names.</li>
+            <li>Refactored the Flask app to return <strong>both model outputs in a single request</strong>.</li>
+            <li>Removed leftover Streamlit usage from project instructions and aligned setup around Flask.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">Requirements checklist</h2>
+        <ul class="list">
+            {% for item in requirements %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+
+<section class="grid grid-2" style="margin-top:24px; align-items:start;">
+    <div class="card">
+        <h2 class="section-title">Suggested presentation talking points</h2>
+        <ul class="list">
+            <li>Explain why sender metadata improves discrimination between spam-like numeric sources and known institutional senders.</li>
+            <li>Compare ensemble vs neural network behavior on minority classes like <strong>gov</strong> and <strong>ads</strong>.</li>
+            <li>Discuss preprocessing decisions for bilingual SMS text and noisy punctuation/number patterns.</li>
+            <li>Show confidence scores, not just top predictions, to explain uncertainty.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">Proactive improvements still aligned with the brief</h2>
+        <ul class="list">
+            <li>Flask multi-page structure for analyzer, project description, and metrics.</li>
+            <li>Graceful neural-network fallback message if TensorFlow is missing in the runtime environment.</li>
+            <li>Reusable inference helpers for CLI and web deployment.</li>
+        </ul>
+    </div>
+</section>
+{% endblock %}

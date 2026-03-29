@@ -1,186 +1,145 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SMS Classifier | Threat Detection System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        body { 
-            font-family: 'Inter', sans-serif;
-            background-color: #0a0a0a;
-            color: #ededed;
-        }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #0a0a0a; }
-        ::-webkit-scrollbar-thumb { background: #262626; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #404040; }
-    </style>
-</head>
-<body class="antialiased min-h-screen selection:bg-gray-700 selection:text-white">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
-        
-        <header class="mb-10 md:mb-16 border-b border-neutral-800 pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <div class="max-w-3xl">
-                <h1 class="text-3xl md:text-4xl font-light tracking-tight text-neutral-400">
-                    <span class="text-red-600 font-bold tracking-tighter drop-shadow-[0_0_8px_rgba(220,38,38,0.3)] uppercase mr-1">SMS</span> 
-                    <span class="text-white font-semibold">Security Analysis</span>
-                </h1>
-                <p class="text-neutral-500 mt-4 text-sm md:text-base leading-relaxed">
-                    Advanced classification of Tagalog and English short message services utilizing Ensemble and Bi-LSTM neural architectures.
-                </p>
-            </div>
-            
-            <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-neutral-900/50 rounded-full border border-neutral-800">
-                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span class="text-[10px] tracking-widest text-neutral-400 font-bold uppercase">System Active</span>
-            </div>
-        </header>
+{% extends 'base.html' %}
+{% block content %}
+<section class="hero">
+    <span class="chip">Sender-aware Flask analyzer</span>
+    <h1>Classify suspicious SMS messages with both models in one run.</h1>
+    <p>
+        This upgraded web app now accepts both the <strong>sender</strong> and the <strong>message body</strong>, then shows the
+        <strong>Ensemble</strong> and <strong>Neural Network</strong> results separately to better match the course requirements.
+    </p>
+</section>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-            
-            <div class="lg:col-span-7 flex flex-col gap-6">
-                <div class="bg-[#121212] border border-neutral-800 p-6 md:p-8 rounded-xl shadow-sm">
-                    
-                    <div class="mb-6">
-                        <label class="block text-xs font-medium mb-2 text-neutral-500 uppercase tracking-widest">
-                            Originating Sender
-                        </label>
-                        <input 
-                            type="text" 
-                            id="senderInput" 
-                            class="w-full bg-[#0a0a0a] border border-neutral-800 rounded-lg p-3 text-sm text-neutral-200 placeholder-neutral-600 focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 outline-none transition-all" 
-                            placeholder="e.g., GCash, 0917XXXXXXX, FoodPanda">
-                    </div>
-
-                    <label class="block text-xs font-medium mb-2 text-neutral-500 uppercase tracking-widest">
-                        Payload Input
-                    </label>
-                    <textarea 
-                        id="smsInput" 
-                        class="w-full h-40 md:h-48 bg-[#0a0a0a] border border-neutral-800 rounded-lg p-4 text-sm text-neutral-200 placeholder-neutral-600 focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 outline-none transition-all resize-y" 
-                        placeholder="Enter message content for analysis..."></textarea>
-                    
-                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-6 gap-4">
-                        <div class="relative w-full sm:w-auto">
-                            <select id="modelSelect" class="w-full sm:w-auto appearance-none bg-[#0a0a0a] border border-neutral-800 rounded-md px-4 py-2.5 text-sm text-neutral-300 outline-none focus:border-neutral-500 cursor-pointer pr-10">
-                                <option value="ensemble">Ensemble Engine</option>
-                                <option value="nn">Neural Network (Bi-LSTM)</option>
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-neutral-500">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </div>
-                        </div>
-                        
-                        <button 
-                            onclick="runAnalysis()" 
-                            class="w-full sm:w-auto bg-white hover:bg-neutral-200 text-black font-medium py-2.5 px-8 rounded-md transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#121212] focus:ring-white">
-                            Execute Analysis
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="lg:col-span-5 h-full">
-                <div id="resultCard" class="bg-[#121212] border border-neutral-800 p-6 md:p-8 rounded-xl shadow-sm h-full flex flex-col opacity-50 transition-opacity duration-300">
-                    <h2 class="text-xs font-medium text-neutral-500 uppercase tracking-widest mb-6">Diagnostic Output</h2>
-                    
-                    <div class="mb-8">
-                        <div id="prediction" class="text-2xl md:text-3xl font-semibold text-white mb-2">Awaiting Input</div>
-                        <p id="meaning" class="text-neutral-400 text-sm leading-relaxed">System ready for classification.</p>
-                    </div>
-                    
-                    <div class="mt-auto">
-                        <h3 class="text-xs font-medium text-neutral-500 uppercase tracking-widest mb-4">Confidence Metrics</h3>
-                        <div id="confidenceBars" class="space-y-4">
-                            <div class="opacity-30">
-                                <div class="flex justify-between text-xs mb-1.5 text-neutral-400">
-                                    <span>--</span>
-                                    <span>0.0%</span>
-                                </div>
-                                <div class="w-full bg-neutral-900 rounded-full h-1"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+<section class="grid grid-2">
+    <div class="card">
+        <h2 class="section-title">Run analysis</h2>
+        <p class="muted">Provide the sender and the SMS content. The sender is now part of the feature pipeline to help the ensemble model distinguish brand, bank, telecom, and suspicious numeric senders.</p>
+        <div style="margin-top:18px;">
+            <label for="senderInput">Sender</label>
+            <input id="senderInput" type="text" placeholder="e.g., GCash, BDO Deals, 0917XXXXXXX">
         </div>
+        <div style="margin-top:16px;">
+            <label for="messageInput">Message</label>
+            <textarea id="messageInput" placeholder="Paste the SMS here..."></textarea>
+        </div>
+        <div style="display:flex; gap:12px; align-items:center; margin-top:18px; flex-wrap:wrap;">
+            <button id="runBtn" class="btn" onclick="runAnalysis()">Analyze message</button>
+            <span class="chip">Results shown separately for both models</span>
+        </div>
+        <p id="statusText" class="muted" style="margin-top:14px;"></p>
     </div>
 
-    <script>
-        async function runAnalysis() {
-            const text = document.getElementById('smsInput').value;
-            const sender = document.getElementById('senderInput').value; // Added Sender
-            const modelType = document.getElementById('modelSelect').value;
-            const resultCard = document.getElementById('resultCard');
-            const btn = document.querySelector('button');
-            
-            if(!text.trim()) {
-                alert("Please provide a message payload for analysis.");
-                return;
-            }
+    <div class="grid" style="gap:18px;">
+        <div class="card">
+            <h2 class="section-title">Why the sender matters</h2>
+            <ul class="list">
+                <li>Brand senders like <strong>GCash</strong> or <strong>BDO</strong> often correlate with legitimate OTP or notification patterns.</li>
+                <li>Unknown numeric senders are more often associated with spam or scams.</li>
+                <li>Sender tokens help the model separate similar message bodies across different origins.</li>
+            </ul>
+        </div>
+        <div class="card">
+            <h2 class="section-title">Compliance highlights</h2>
+            <ul class="list">
+                <li>Flask-only web application</li>
+                <li>User input fields for sender and message</li>
+                <li>Separate Ensemble and Neural Network outputs</li>
+                <li>Confidence scores and interpretation per prediction</li>
+            </ul>
+        </div>
+    </div>
+</section>
 
-            // UI Loading state
-            btn.innerText = "Analyzing...";
-            btn.classList.add('opacity-70', 'cursor-not-allowed');
-            btn.disabled = true;
+<section class="grid grid-2" style="margin-top:24px; align-items:start;">
+    <div class="card" id="ensembleCard">
+        <div class="result-title">
+            <h2 class="section-title" style="margin:0;">Ensemble result</h2>
+            <span class="chip">Primary upgraded model</span>
+        </div>
+        <div class="prediction" id="ensemblePrediction">Awaiting input</div>
+        <p class="muted" id="ensembleInterpretation">Run the analyzer to see the ensemble prediction.</p>
+        <div class="kv"><span>Confidence</span><strong id="ensembleConfidence">—</strong></div>
+        <div class="kv"><span>Confidence level</span><strong id="ensembleLevel">—</strong></div>
+        <div class="confidence-list" id="ensembleScores"></div>
+    </div>
 
-            try {
-                const response = await fetch('/predict', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    // Included sender in the payload
-                    body: JSON.stringify({ 
-                        message: text, 
-                        sender: sender || "Unknown", 
-                        model_type: modelType 
-                    })
-                });
-                const data = await response.json();
+    <div class="card" id="nnCard">
+        <div class="result-title">
+            <h2 class="section-title" style="margin:0;">Neural Network result</h2>
+            <span class="chip">BiLSTM model</span>
+        </div>
+        <div class="prediction" id="nnPrediction">Awaiting input</div>
+        <p class="muted" id="nnInterpretation">Run the analyzer to see the neural network prediction.</p>
+        <div class="kv"><span>Confidence</span><strong id="nnConfidence">—</strong></div>
+        <div class="kv"><span>Confidence level</span><strong id="nnLevel">—</strong></div>
+        <div class="confidence-list" id="nnScores"></div>
+    </div>
+</section>
 
-                if (data.error) throw new Error(data.error);
+<script>
+function renderScores(containerId, scores) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    const entries = Object.entries(scores || {});
+    if (!entries.length) {
+        container.innerHTML = '<p class="muted">No confidence distribution available.</p>';
+        return;
+    }
+    entries.sort((a, b) => b[1] - a[1]);
+    for (const [label, value] of entries) {
+        const pct = (Number(value) * 100).toFixed(1);
+        const item = document.createElement('div');
+        item.innerHTML = `
+            <div class="kv"><span>${label}</span><strong>${pct}%</strong></div>
+            <div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div>
+        `;
+        container.appendChild(item);
+    }
+}
 
-                // Display Results
-                resultCard.classList.remove('opacity-50');
-                document.getElementById('prediction').innerText = data.prediction;
-                document.getElementById('meaning').innerText = data.interpretation;
+function renderModel(prefix, payload) {
+    const unavailable = payload && payload.available === false;
+    document.getElementById(`${prefix}Prediction`).textContent = unavailable ? 'Unavailable' : (payload.prediction || 'No result');
+    document.getElementById(`${prefix}Interpretation`).textContent = unavailable
+        ? (payload.error || 'Model unavailable.')
+        : (payload.interpretation || 'No interpretation available.');
+    document.getElementById(`${prefix}Confidence`).textContent = payload.confidence == null ? '—' : `${(payload.confidence * 100).toFixed(1)}%`;
+    document.getElementById(`${prefix}Level`).textContent = payload.confidence_level || '—';
+    renderScores(`${prefix}Scores`, payload.confidence_scores || {});
+}
 
-                const barsContainer = document.getElementById('confidenceBars');
-                barsContainer.innerHTML = '';
-                
-                Object.entries(data.confidence_scores).forEach(([label, score]) => {
-                    const percentage = (score * 100).toFixed(1);
-                    barsContainer.innerHTML += `
-                        <div>
-                            <div class="flex justify-between text-xs mb-1.5 font-medium">
-                                <span class="text-neutral-300">${label}</span>
-                                <span class="text-white">${percentage}%</span>
-                            </div>
-                            <div class="w-full bg-neutral-900 rounded-full h-1 overflow-hidden">
-                                <div class="bg-white h-1 rounded-full transition-all duration-1000 ease-out" style="width: 0%" data-target="${percentage}%"></div>
-                            </div>
-                        </div>
-                    `;
-                });
+async function runAnalysis() {
+    const message = document.getElementById('messageInput').value.trim();
+    const sender = document.getElementById('senderInput').value.trim() || 'unknown';
+    const status = document.getElementById('statusText');
+    const btn = document.getElementById('runBtn');
 
-                setTimeout(() => {
-                    barsContainer.querySelectorAll('[data-target]').forEach(bar => {
-                        bar.style.width = bar.getAttribute('data-target');
-                    });
-                }, 50);
+    if (!message) {
+        status.textContent = 'Please enter a message first.';
+        return;
+    }
 
-            } catch (error) {
-                console.error("Analysis failed:", error);
-                document.getElementById('prediction').innerText = "Error";
-                document.getElementById('meaning').innerText = error.message || "Connection to classification engine failed.";
-            } finally {
-                btn.innerText = "Execute Analysis";
-                btn.classList.remove('opacity-70', 'cursor-not-allowed');
-                btn.disabled = false;
-            }
-        }
-    </script>
-</body>
-</html>
+    btn.disabled = true;
+    btn.textContent = 'Analyzing...';
+    status.textContent = 'Running both models...';
+
+    try {
+        const response = await fetch('/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, sender })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Request failed.');
+
+        renderModel('ensemble', data.ensemble);
+        renderModel('nn', data.nn);
+        status.textContent = `Analyzed sender "${data.sender}" successfully.`;
+    } catch (error) {
+        status.textContent = error.message || 'Failed to analyze the message.';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Analyze message';
+    }
+}
+</script>
+{% endblock %}

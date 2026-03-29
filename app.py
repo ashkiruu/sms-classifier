@@ -1,59 +1,60 @@
-from flask import Flask, render_template, request, jsonify
-import joblib
-import numpy as np
-import tensorflow as tf
-from pathlib import Path
-import sys
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+from __future__ import annotations
 
-# Integrate your existing logic
+import json
+import sys
+from pathlib import Path
+
+from flask import Flask, jsonify, render_template, request
+
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
-from preprocessing import preprocess_text
-from utils import MODELS_DIR, interpret_label
+from model_service import predict_all
+from utils import load_json_report
 
 app = Flask(__name__)
+app.config["JSON_SORT_KEYS"] = False
 
-# --- Global Model Loading ---
-# We load these once when the server starts to keep it fast
-ensemble_model = joblib.load(MODELS_DIR / "ensemble_best_model.pkl")
-nn_model = tf.keras.models.load_model(MODELS_DIR / "nn_best_model.keras")
-nn_tokenizer = joblib.load(MODELS_DIR / "nn_tokenizer.pkl")
-nn_le = joblib.load(MODELS_DIR / "nn_label_encoder.pkl")
 
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.json
-    raw_text = data.get("message", "")
-    model_choice = data.get("model_type", "ensemble")
 
-    if not raw_text:
-        return jsonify({"error": "No text provided"}), 400
+@app.route("/about")
+def about():
+    requirements = [
+        "Supervised classification project with separate ensemble and neural network models",
+        "Flask-only web integration",
+        "User-entered fields for analysis",
+        "Separate model outputs with confidence information",
+        "Problem, dataset, model, and metrics discussion pages",
+    ]
+    return render_template("about.html", requirements=requirements)
 
-    cleaned = preprocess_text(raw_text)
 
-    if model_choice == "nn":
-        # Neural Network Logic
-        seq = nn_tokenizer.texts_to_sequences([cleaned])
-        padded = pad_sequences(seq, maxlen=100, padding='post')
-        probs = nn_model.predict(padded, verbose=0)[0]
-        pred_idx = np.argmax(probs)
-        pred_label = nn_le.inverse_transform([pred_idx])[0]
-        labels = nn_le.classes_.tolist()
-    else:
-        # Ensemble Logic
-        pred_label = ensemble_model.predict([cleaned])[0]
-        probs = ensemble_model.predict_proba([cleaned])[0]
-        labels = ensemble_model.classes_.tolist()
+@app.route("/metrics")
+def metrics():
+    ensemble_metrics = load_json_report("best_model_test_metrics.json", default={})
+    nn_metrics = load_json_report("nn_metrics_summary.json", default={})
+    return render_template("metrics.html", ensemble_metrics=ensemble_metrics, nn_metrics=nn_metrics)
 
-    return jsonify({
-        "prediction": pred_label,
-        "interpretation": interpret_label(pred_label),
-        "confidence_scores": dict(zip(labels, [round(float(p), 4) for p in probs]))
-    })
 
-if __name__ == '__main__':
+@app.route("/api/predict", methods=["POST"])
+def api_predict():
+    data = request.get_json(silent=True) or {}
+    message = (data.get("message") or "").strip()
+    sender = (data.get("sender") or "unknown").strip() or "unknown"
+
+    if not message:
+        return jsonify({"error": "Message is required."}), 400
+
+    result = predict_all(message=message, sender=sender)
+    return jsonify(result)
+
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
+
+
+if __name__ == "__main__":
     app.run(debug=True)
