@@ -1,79 +1,353 @@
 {% extends 'base.html' %}
+
 {% block content %}
-<section class="hero">
-    <span class="chip">Sender-aware Flask analyzer</span>
-    <h1>Classify suspicious SMS messages with both models in one run.</h1>
-    <p>
-        This upgraded web app now accepts both the <strong>sender</strong> and the <strong>message body</strong>, then shows the
-        <strong>Ensemble</strong> and <strong>Neural Network</strong> results separately to better match the course requirements.
-    </p>
-</section>
+<style>
+    /* Scoped Dashboard Styles */
+    .analyzer-dashboard {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #334155;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px 16px;
+    }
 
-<section class="grid grid-2">
-    <div class="card">
-        <h2 class="section-title">Run analysis</h2>
-        <p class="muted">Provide the sender and the SMS content. The sender is now part of the feature pipeline to help the ensemble model distinguish brand, bank, telecom, and suspicious numeric senders.</p>
-        <div style="margin-top:18px;">
-            <label for="senderInput">Sender</label>
-            <input id="senderInput" type="text" placeholder="e.g., GCash, BDO Deals, 0917XXXXXXX">
-        </div>
-        <div style="margin-top:16px;">
-            <label for="messageInput">Message</label>
-            <textarea id="messageInput" placeholder="Paste the SMS here..."></textarea>
-        </div>
-        <div style="display:flex; gap:12px; align-items:center; margin-top:18px; flex-wrap:wrap;">
-            <button id="runBtn" class="btn" onclick="runAnalysis()">Analyze message</button>
-            <span class="chip">Results shown separately for both models</span>
-        </div>
-        <p id="statusText" class="muted" style="margin-top:14px;"></p>
-    </div>
+    /* Hero Section */
+    .dashboard-hero {
+        text-align: center;
+        background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+        border-radius: 16px;
+        padding: 48px 24px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid #e2e8f0;
+    }
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        background: #4f46e5;
+        color: #ffffff;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 16px;
+    }
+    .chip.secondary {
+        background: #e2e8f0;
+        color: #475569;
+        margin-bottom: 0;
+        font-size: 0.75rem;
+    }
+    .dashboard-hero h1 {
+        margin: 0 0 12px 0;
+        color: #0f172a;
+        font-size: 2.2rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    .dashboard-hero p {
+        color: #475569;
+        font-size: 1.1rem;
+        margin: 0 auto;
+        max-width: 800px;
+        line-height: 1.6;
+    }
 
-    <div class="grid" style="gap:18px;">
+    /* Layout Grids */
+    .grid-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+    @media (min-width: 900px) {
+        .grid-layout.split-layout { grid-template-columns: 1.2fr 1fr; }
+        .grid-layout.halves { grid-template-columns: 1fr 1fr; }
+    }
+    .info-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    /* Cards */
+    .card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
+        height: 100%;
+        box-sizing: border-box;
+    }
+    #ensembleCard { border-top: 6px solid #10b981; } /* Emerald */
+    #nnCard { border-top: 6px solid #6366f1; } /* Indigo */
+
+    .section-title {
+        margin-top: 0;
+        color: #0f172a;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+    .muted {
+        color: #64748b;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    /* Forms & Inputs */
+    .form-group {
+        margin-top: 20px;
+    }
+    label {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 8px;
+    }
+    input[type="text"], textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 14px 16px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: #f8fafc;
+        font-size: 1rem;
+        font-family: inherit;
+        color: #1e293b;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+    input[type="text"]:focus, textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        background: #ffffff;
+    }
+
+    /* Button */
+    .btn {
+        background: #3b82f6;
+        color: #ffffff;
+        border: none;
+        padding: 12px 24px;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background-color 0.2s, transform 0.1s;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+    }
+    .btn:hover {
+        background: #2563eb;
+    }
+    .btn:active {
+        transform: translateY(1px);
+    }
+    .btn:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+
+    /* Lists */
+    .list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .list li {
+        position: relative;
+        padding-left: 24px;
+        margin-bottom: 12px;
+        color: #475569;
+        line-height: 1.5;
+    }
+    .list li::before {
+        content: "•";
+        color: #3b82f6;
+        font-size: 1.5rem;
+        position: absolute;
+        left: 0;
+        top: -4px;
+    }
+
+    /* Results Dashboard Elements */
+    .result-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .prediction {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #0f172a;
+        background: #f8fafc;
+        padding: 16px;
+        border-radius: 12px;
+        text-align: center;
+        border: 1px dashed #cbd5e1;
+        margin-bottom: 16px;
+    }
+    .kv {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        font-size: 0.95rem;
+    }
+    .kv span {
+        color: #64748b;
+        font-weight: 500;
+    }
+    .kv strong {
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    /* Dynamic Progress Bars (Generated by JS) */
+    .confidence-list {
+        margin-top: 24px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+    }
+    .bar-wrap {
+        background: #e2e8f0;
+        border-radius: 6px;
+        height: 8px;
+        width: 100%;
+        margin-top: 4px;
+        margin-bottom: 12px;
+        overflow: hidden;
+    }
+    .bar {
+        background: #3b82f6;
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+</style>
+
+<div class="analyzer-dashboard">
+    <section class="dashboard-hero">
+        <span class="chip">Sender-aware Flask analyzer</span>
+        <h1>Classify suspicious SMS messages with both models.</h1>
+        <p>
+            This upgraded web app now accepts both the <strong>sender</strong> and the <strong>message body</strong>, then shows the <strong>Ensemble</strong> and <strong>Neural Network</strong> results separately to better match the course requirements.
+        </p>
+    </section>
+
+    <section class="grid-layout split-layout">
+        
         <div class="card">
-            <h2 class="section-title">Why the sender matters</h2>
-            <ul class="list">
-                <li>Brand senders like <strong>GCash</strong> or <strong>BDO</strong> often correlate with legitimate OTP or notification patterns.</li>
-                <li>Unknown numeric senders are more often associated with spam or scams.</li>
-                <li>Sender tokens help the model separate similar message bodies across different origins.</li>
-            </ul>
+            <h2 class="section-title">Run Analysis</h2>
+            <p class="muted">Provide the sender and the SMS content. The sender is now part of the feature pipeline to help the models distinguish brand, bank, telecom, and suspicious numeric senders.</p>
+            
+            <div class="form-group">
+                <label for="senderInput">Sender</label>
+                <input id="senderInput" type="text" placeholder="e.g., GCash, BDO Deals, +63917XXXXXXX">
+            </div>
+            
+            <div class="form-group">
+                <label for="messageInput">Message</label>
+                <textarea id="messageInput" placeholder="Paste the SMS content here..."></textarea>
+            </div>
+            
+            <div style="display:flex; gap:16px; align-items:center; margin-top:24px; flex-wrap:wrap;">
+                <button id="runBtn" class="btn" onclick="runAnalysis()">Analyze message</button>
+                <span class="chip secondary">Results shown separately below</span>
+            </div>
+            <p id="statusText" class="muted" style="margin-top:16px; font-weight: 500;"></p>
         </div>
-        <div class="card">
-            <h2 class="section-title">Compliance highlights</h2>
-            <ul class="list">
-                <li>Flask-only web application</li>
-                <li>User input fields for sender and message</li>
-                <li>Separate Ensemble and Neural Network outputs</li>
-                <li>Confidence scores and interpretation per prediction</li>
-            </ul>
-        </div>
-    </div>
-</section>
 
-<section class="grid grid-2" style="margin-top:24px; align-items:start;">
-    <div class="card" id="ensembleCard">
-        <div class="result-title">
-            <h2 class="section-title" style="margin:0;">Ensemble result</h2>
-            <span class="chip">Primary upgraded model</span>
+        <div class="info-stack">
+            <div class="card" style="padding: 24px;">
+                <h2 class="section-title">Why the sender matters</h2>
+                <ul class="list">
+                    <li>Brand senders like <strong>GCash</strong> or <strong>BDO</strong> often correlate with legitimate OTP or notification patterns.</li>
+                    <li>Unknown numeric senders are more often associated with spam or scams.</li>
+                    <li>Sender tokens help the model separate similar message bodies across different origins.</li>
+                </ul>
+            </div>
+            <div class="card" style="padding: 24px;">
+                <h2 class="section-title">Compliance highlights</h2>
+                <ul class="list">
+                    <li>Flask-only web application</li>
+                    <li>User input fields for sender and message</li>
+                    <li>Separate Ensemble and Neural Network outputs</li>
+                    <li>Confidence scores and interpretation per prediction</li>
+                </ul>
+            </div>
         </div>
-        <div class="prediction" id="ensemblePrediction">Awaiting input</div>
-        <p class="muted" id="ensembleInterpretation">Run the analyzer to see the ensemble prediction.</p>
-        <div class="kv"><span>Confidence</span><strong id="ensembleConfidence">—</strong></div>
-        <div class="kv"><span>Confidence level</span><strong id="ensembleLevel">—</strong></div>
-        <div class="confidence-list" id="ensembleScores"></div>
-    </div>
+    </section>
 
-    <div class="card" id="nnCard">
-        <div class="result-title">
-            <h2 class="section-title" style="margin:0;">Neural Network result</h2>
-            <span class="chip">BiLSTM model</span>
+    <section class="grid-layout halves" style="margin-top: 40px;">
+        
+        <div class="card" id="ensembleCard">
+            <div class="result-title">
+                <h2 class="section-title" style="margin:0;">Ensemble Result</h2>
+                <span class="chip secondary">Primary Upgraded Model</span>
+            </div>
+            
+            <div class="prediction" id="ensemblePrediction">Awaiting input</div>
+            <p class="muted" id="ensembleInterpretation" style="margin-bottom: 24px; text-align: center;">Run the analyzer to see the ensemble prediction.</p>
+            
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                <div class="kv">
+                    <span>Confidence</span>
+                    <strong id="ensembleConfidence">—</strong>
+                </div>
+                <div class="kv">
+                    <span>Confidence Level</span>
+                    <strong id="ensembleLevel">—</strong>
+                </div>
+            </div>
+            
+            <div class="confidence-list" id="ensembleScores">
+                <p class="muted" style="text-align: center;">Confidence distribution will appear here.</p>
+            </div>
         </div>
-        <div class="prediction" id="nnPrediction">Awaiting input</div>
-        <p class="muted" id="nnInterpretation">Run the analyzer to see the neural network prediction.</p>
-        <div class="kv"><span>Confidence</span><strong id="nnConfidence">—</strong></div>
-        <div class="kv"><span>Confidence level</span><strong id="nnLevel">—</strong></div>
-        <div class="confidence-list" id="nnScores"></div>
-    </div>
-</section>
+
+        <div class="card" id="nnCard">
+            <div class="result-title">
+                <h2 class="section-title" style="margin:0;">Neural Network Result</h2>
+                <span class="chip secondary">BiLSTM Model</span>
+            </div>
+            
+            <div class="prediction" id="nnPrediction">Awaiting input</div>
+            <p class="muted" id="nnInterpretation" style="margin-bottom: 24px; text-align: center;">Run the analyzer to see the neural network prediction.</p>
+            
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                <div class="kv">
+                    <span>Confidence</span>
+                    <strong id="nnConfidence">—</strong>
+                </div>
+                <div class="kv">
+                    <span>Confidence Level</span>
+                    <strong id="nnLevel">—</strong>
+                </div>
+            </div>
+            
+            <div class="confidence-list" id="nnScores">
+                <p class="muted" style="text-align: center;">Confidence distribution will appear here.</p>
+            </div>
+        </div>
+        
+    </section>
+</div>
 
 <script>
 function renderScores(containerId, scores) {
@@ -81,7 +355,7 @@ function renderScores(containerId, scores) {
     container.innerHTML = '';
     const entries = Object.entries(scores || {});
     if (!entries.length) {
-        container.innerHTML = '<p class="muted">No confidence distribution available.</p>';
+        container.innerHTML = '<p class="muted" style="text-align:center;">No confidence distribution available.</p>';
         return;
     }
     entries.sort((a, b) => b[1] - a[1]);
@@ -89,7 +363,7 @@ function renderScores(containerId, scores) {
         const pct = (Number(value) * 100).toFixed(1);
         const item = document.createElement('div');
         item.innerHTML = `
-            <div class="kv"><span>${label}</span><strong>${pct}%</strong></div>
+            <div class="kv" style="padding-bottom:4px;"><span>${label}</span><strong>${pct}%</strong></div>
             <div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div>
         `;
         container.appendChild(item);
@@ -98,7 +372,20 @@ function renderScores(containerId, scores) {
 
 function renderModel(prefix, payload) {
     const unavailable = payload && payload.available === false;
-    document.getElementById(`${prefix}Prediction`).textContent = unavailable ? 'Unavailable' : (payload.prediction || 'No result');
+    
+    // Update Prediction Text
+    const predictionEl = document.getElementById(`${prefix}Prediction`);
+    predictionEl.textContent = unavailable ? 'Unavailable' : (payload.prediction || 'No result');
+    
+    // Add visual cues depending on the text (optional enhancement, kept simple)
+    if(payload && payload.prediction) {
+        predictionEl.style.borderColor = payload.prediction.toLowerCase().includes('spam') || payload.prediction.toLowerCase().includes('scam') ? '#fca5a5' : '#86efac';
+        predictionEl.style.backgroundColor = payload.prediction.toLowerCase().includes('spam') || payload.prediction.toLowerCase().includes('scam') ? '#fef2f2' : '#f0fdf4';
+    } else {
+        predictionEl.style.borderColor = '#cbd5e1';
+        predictionEl.style.backgroundColor = '#f8fafc';
+    }
+
     document.getElementById(`${prefix}Interpretation`).textContent = unavailable
         ? (payload.error || 'Model unavailable.')
         : (payload.interpretation || 'No interpretation available.');
@@ -115,11 +402,13 @@ async function runAnalysis() {
 
     if (!message) {
         status.textContent = 'Please enter a message first.';
+        status.style.color = '#e11d48'; // Red for error
         return;
     }
 
     btn.disabled = true;
     btn.textContent = 'Analyzing...';
+    status.style.color = '#3b82f6';
     status.textContent = 'Running both models...';
 
     try {
@@ -133,8 +422,10 @@ async function runAnalysis() {
 
         renderModel('ensemble', data.ensemble);
         renderModel('nn', data.nn);
+        status.style.color = '#10b981'; // Green for success
         status.textContent = `Analyzed sender "${data.sender}" successfully.`;
     } catch (error) {
+        status.style.color = '#e11d48';
         status.textContent = error.message || 'Failed to analyze the message.';
     } finally {
         btn.disabled = false;

@@ -9,6 +9,7 @@ from flask import Flask, jsonify, render_template, request
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 from model_service import predict_all
 from utils import load_json_report
+from history_service import save_analysis_history
 
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
@@ -59,6 +60,13 @@ def api_predict():
         return jsonify({"error": "Message is required."}), 400
 
     result = predict_all(message=message, sender=sender)
+    storage_used = save_analysis_history(
+        sender=sender,
+        message=message,
+        ensemble_result=result["ensemble"],
+        nn_result=result["nn"],
+    )
+    result["history_storage"] = storage_used
     return jsonify(result)
 
 

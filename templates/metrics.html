@@ -1,81 +1,349 @@
 {% extends 'base.html' %}
+
 {% block content %}
-<section class="hero">
-    <span class="chip">Metrics and reports</span>
-    <h1>Model evaluation summary</h1>
-    <p>These values are loaded from the generated report files in <code>outputs/reports</code>.</p>
-</section>
+<style>
+    /* Scoped Dashboard Styles */
+    .metrics-dashboard {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #334155;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px 16px;
+    }
 
-<section class="grid grid-2">
-    <div class="card">
-        <h2 class="section-title">Ensemble</h2>
-        {% if ensemble_metrics.test_metrics %}
-            <div class="stat">{{ '%.2f'|format(ensemble_metrics.test_metrics.accuracy * 100) }}%</div>
-            <p class="muted">Test accuracy</p>
+    /* Hero Section */
+    .dashboard-hero {
+        text-align: center;
+        background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+        border-radius: 16px;
+        padding: 48px 24px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid #e2e8f0;
+    }
+    .chip {
+        display: inline-block;
+        background: #4f46e5;
+        color: #ffffff;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 16px;
+    }
+    .dashboard-hero h1 {
+        margin: 0 0 12px 0;
+        color: #0f172a;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    .dashboard-hero p {
+        color: #475569;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+    code.inline-code {
+        background: #f1f5f9;
+        color: #be123c;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 0.9em;
+        border: 1px solid #e2e8f0;
+    }
 
-            <div class="stat">{{ '%.2f'|format(ensemble_metrics.test_metrics.f1_macro * 100) }}%</div>
-            <p class="muted">Macro F1</p>
+    /* Grid & Cards */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+    .metric-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+    }
+    .metric-card.ensemble {
+        border-top: 6px solid #10b981; /* Emerald Green Accent */
+    }
+    .metric-card.nn {
+        border-top: 6px solid #6366f1; /* Indigo Accent */
+    }
+    .section-title {
+        margin-top: 0;
+        color: #0f172a;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-            <p class="muted"><strong>Best model:</strong> {{ ensemble_metrics.best_model }}</p>
-            <p class="muted"><strong>Features:</strong> {{ ensemble_metrics.feature_strategy or 'Not provided' }}</p>
+    /* Stats Display */
+    .stat-container {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .stat-box {
+        flex: 1;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+    }
+    .stat-box.ensemble-stat .stat-value { color: #059669; }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+    .stat-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 4px;
+        font-weight: 600;
+    }
 
-            <pre style="white-space:pre-wrap; color:#dfe6ff; background:#0d1328; border-radius:12px; padding:14px; border:1px solid var(--border);">{{ ensemble_metrics.test_metrics.classification_report }}</pre>
-        {% else %}
-            <p class="muted">No ensemble metrics found yet. Run <code>python src/train_ensemble.py</code>.</p>
-        {% endif %}
-    </div>
+    /* Details & KV Rows */
+    .detail-text {
+        color: #475569;
+        font-size: 0.95rem;
+        margin: 8px 0;
+        line-height: 1.5;
+    }
+    .detail-text strong {
+        color: #0f172a;
+    }
+    .kv-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.95rem;
+    }
+    .kv-row:last-child {
+        border-bottom: none;
+    }
+    .kv-row span {
+        color: #64748b;
+        font-weight: 500;
+    }
+    .kv-row strong {
+        color: #0f172a;
+        font-weight: 600;
+        background: #f1f5f9;
+        padding: 4px 10px;
+        border-radius: 6px;
+    }
 
-    <div class="card">
-        <h2 class="section-title">Neural Network</h2>
-        {% if nn_metrics.test_results %}
-            <p class="muted"><strong>Best initializer:</strong> {{ nn_metrics.best_initialization }}</p>
-            <p class="muted"><strong>Features:</strong> {{ nn_metrics.feature_strategy or 'Not provided' }}</p>
+    /* Code & Preformatted Text */
+    .report-block {
+        white-space: pre-wrap;
+        color: #1e293b;
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        overflow-x: auto;
+        margin-top: 24px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
 
-            {% for row in nn_metrics.test_results %}
-                <div style="padding:12px 0; border-top:1px solid var(--border);">
-                    <div class="kv"><span>{{ row.Initialization }}</span><strong>{{ '%.2f'|format(row.Accuracy * 100) }}% acc</strong></div>
-                    <div class="kv"><span>Macro F1</span><strong>{{ '%.2f'|format(row.F1_Macro * 100) }}%</strong></div>
-                    <div class="kv"><span>Kappa</span><strong>{{ '%.3f'|format(row.Kappa) }}</strong></div>
+    /* Bottom Section */
+    .applications-section {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
+        border-left: 6px solid #3b82f6; /* Blue Accent */
+    }
+    .applications-section p {
+        color: #475569;
+        font-size: 1.05rem;
+        line-height: 1.6;
+        margin-bottom: 24px;
+    }
+    .app-list {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    .app-list li {
+        background: #f8fafc;
+        padding: 16px 20px;
+        border-radius: 10px;
+        border: 1px solid #f1f5f9;
+        color: #475569;
+        line-height: 1.5;
+        position: relative;
+        padding-left: 44px;
+    }
+    .app-list li::before {
+        content: "✓";
+        position: absolute;
+        left: 16px;
+        top: 16px;
+        color: #3b82f6;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    .app-list li strong {
+        display: block;
+        color: #0f172a;
+        margin-bottom: 4px;
+        font-size: 1rem;
+    }
+    .alert-muted {
+        background: #f8fafc;
+        color: #64748b;
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px dashed #cbd5e1;
+        text-align: center;
+    }
+</style>
+
+<div class="metrics-dashboard">
+    <section class="dashboard-hero">
+        <span class="chip">Metrics and reports</span>
+        <h1>Model Evaluation Summary</h1>
+        <p>These values are loaded from the generated report files in <code class="inline-code">outputs/reports</code>.</p>
+    </section>
+
+    <section class="metrics-grid">
+        
+        <div class="metric-card ensemble">
+            <h2 class="section-title">Ensemble Model</h2>
+            
+            {% if ensemble_metrics.test_metrics %}
+                <div class="stat-container">
+                    <div class="stat-box ensemble-stat">
+                        <div class="stat-value">{{ '%.2f'|format(ensemble_metrics.test_metrics.accuracy * 100) }}%</div>
+                        <div class="stat-label">Test Accuracy</div>
+                    </div>
+                    <div class="stat-box ensemble-stat">
+                        <div class="stat-value">{{ '%.2f'|format(ensemble_metrics.test_metrics.f1_macro * 100) }}%</div>
+                        <div class="stat-label">Macro F1</div>
+                    </div>
                 </div>
-            {% endfor %}
 
-            {% if nn_classification_report %}
-                <pre style="white-space:pre-wrap; color:#dfe6ff; background:#0d1328; border-radius:12px; padding:14px; border:1px solid var(--border); margin-top:14px;">{{ nn_classification_report }}</pre>
+                <div class="metric-details">
+                    <p class="detail-text"><strong>Best model:</strong> {{ ensemble_metrics.best_model }}</p>
+                    <p class="detail-text"><strong>Features:</strong> {{ ensemble_metrics.feature_strategy or 'Not provided' }}</p>
+                </div>
+
+                <pre class="report-block">{{ ensemble_metrics.test_metrics.classification_report }}</pre>
+            {% else %}
+                <div class="alert-muted">
+                    No ensemble metrics found yet.<br>
+                    Run <code class="inline-code">python src/train_ensemble.py</code>.
+                </div>
             {% endif %}
-        {% else %}
-            <p class="muted">No neural-network metrics found yet. Run <code>python src/train_nn.py</code> after installing TensorFlow.</p>
-        {% endif %}
-    </div>
-</section>
+        </div>
 
-<section class="card" style="margin-top:24px;">
-    <h2 class="section-title">Applications of the Results</h2>
-    <p class="muted">
-        The evaluation results show that both models can be used in practical SMS classification tasks, especially for filtering and organizing incoming messages based on their content and sender.
-    </p>
+        <div class="metric-card nn">
+            <h2 class="section-title">Neural Network</h2>
+            
+            {% if nn_metrics.test_results %}
+                <div class="metric-details" style="margin-bottom: 24px;">
+                    <p class="detail-text"><strong>Best initializer:</strong> {{ nn_metrics.best_initialization }}</p>
+                    <p class="detail-text"><strong>Features:</strong> {{ nn_metrics.feature_strategy or 'Not provided' }}</p>
+                </div>
 
-    <ul class="list">
-        <li>
-            <strong>Spam detection:</strong> Messages predicted as spam can be flagged early to help users avoid scams, phishing attempts, and unwanted promotions.
-        </li>
-        <li>
-            <strong>Automatic SMS categorization:</strong> The models can sort messages into categories such as ads, OTP, notifications, government messages, and spam for easier inbox management.
-        </li>
-        <li>
-            <strong>Fraud awareness support:</strong> Since the system considers both sender and message content, it can help identify suspicious sender-message combinations that may look legitimate at first glance.
-        </li>
-        <li>
-            <strong>Priority message handling:</strong> Important messages such as OTPs and trusted notifications can be separated from low-priority or risky messages.
-        </li>
-        <li>
-            <strong>Decision support for users:</strong> Confidence scores and interpretations can help users understand why a message may be risky or safe before taking action.
-        </li>
-        <li>
-            <strong>Integration into mobile or web tools:</strong> These results suggest the models can be embedded into messaging dashboards, security tools, or SMS screening applications.
-        </li>
-        <li>
-            <strong>Model comparison for deployment:</strong> Since both the Ensemble and Neural Network are shown separately, developers can compare which model is more stable, accurate, and practical for real-world use.
-        </li>
-    </ul>
-</section>
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                    {% for row in nn_metrics.test_results %}
+                        <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 0 16px; margin-bottom: 12px;">
+                            <div class="kv-row">
+                                <span>Init Strategy</span>
+                                <strong style="background: #e0e7ff; color: #4338ca;">{{ row.Initialization }}</strong>
+                            </div>
+                            <div class="kv-row">
+                                <span>Accuracy</span>
+                                <strong>{{ '%.2f'|format(row.Accuracy * 100) }}%</strong>
+                            </div>
+                            <div class="kv-row">
+                                <span>Macro F1</span>
+                                <strong>{{ '%.2f'|format(row.F1_Macro * 100) }}%</strong>
+                            </div>
+                            <div class="kv-row" style="border-bottom: none;">
+                                <span>Kappa</span>
+                                <strong>{{ '%.3f'|format(row.Kappa) }}</strong>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if nn_classification_report %}
+                    <pre class="report-block">{{ nn_classification_report }}</pre>
+                {% endif %}
+            {% else %}
+                <div class="alert-muted">
+                    No neural-network metrics found yet.<br>
+                    Run <code class="inline-code">python src/train_nn.py</code> after installing TensorFlow.
+                </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="applications-section">
+        <h2 class="section-title">Applications of the Results</h2>
+        <p>
+            The evaluation results show that both models can be used in practical SMS classification tasks, especially for filtering and organizing incoming messages based on their content and sender.
+        </p>
+
+        <ul class="app-list">
+            <li>
+                <strong>Spam detection</strong>
+                Messages predicted as spam can be flagged early to help users avoid scams, phishing attempts, and unwanted promotions.
+            </li>
+            <li>
+                <strong>Automatic SMS categorization</strong>
+                The models can sort messages into categories such as ads, OTP, notifications, government messages, and spam for easier inbox management.
+            </li>
+            <li>
+                <strong>Fraud awareness support</strong>
+                Since the system considers both sender and message content, it can help identify suspicious sender-message combinations that may look legitimate at first glance.
+            </li>
+            <li>
+                <strong>Priority message handling</strong>
+                Important messages such as OTPs and trusted notifications can be separated from low-priority or risky messages.
+            </li>
+            <li>
+                <strong>Decision support for users</strong>
+                Confidence scores and interpretations can help users understand why a message may be risky or safe before taking action.
+            </li>
+            <li>
+                <strong>Integration into tools</strong>
+                These results suggest the models can be embedded into messaging dashboards, security tools, or SMS screening applications.
+            </li>
+            <li>
+                <strong>Model comparison for deployment</strong>
+                Since both the Ensemble and Neural Network are shown separately, developers can compare which model is more stable, accurate, and practical for real-world use.
+            </li>
+        </ul>
+    </section>
+</div>
 {% endblock %}

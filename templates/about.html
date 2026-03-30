@@ -1,70 +1,235 @@
 {% extends 'base.html' %}
+
 {% block content %}
-<section class="hero">
-    <span class="chip">Project overview</span>
-    <h1>About the SMS security classification project</h1>
-    <p>
-        The project addresses SMS fraud and message triage by classifying incoming texts into
-        <strong>ads</strong>, <strong>gov</strong>, <strong>notifs</strong>, <strong>otp</strong>, and <strong>spam</strong>.
-        The web application is built with <strong>Flask only</strong> and integrates both an ensemble classifier and a neural network.
-    </p>
-</section>
+<style>
+    /* Scoped About Page Styles */
+    .about-container {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: #334155;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-bottom: 60px;
+    }
 
-<section class="grid grid-3">
-    <div class="card">
-        <h2 class="section-title">Problem</h2>
-        <p class="muted">Users often receive mixed Tagalog-English SMS messages where scam, OTP, government, and promotional content can look similar. A classifier helps flag risky messages and support better decision making.</p>
-    </div>
-    <div class="card">
-        <h2 class="section-title">Dataset</h2>
-        <p class="muted">The dataset includes sender, message body, and class label. The upgraded preprocessing pipeline now preserves sender identity as a normalized token so the model can learn source-level patterns.</p>
-    </div>
-    <div class="card">
-        <h2 class="section-title">Output</h2>
-        <p class="muted">The app returns both model predictions separately, along with a class interpretation and confidence breakdown per label.</p>
-    </div>
-</section>
+    /* Hero Section */
+    .about-hero {
+        text-align: center;
+        background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+        border-radius: 20px;
+        padding: 60px 24px;
+        margin-bottom: 40px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .chip {
+        display: inline-block;
+        background: #4f46e5;
+        color: #ffffff;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 20px;
+    }
+    .about-hero h1 {
+        margin: 0 0 16px 0;
+        color: #0f172a;
+        font-size: 2.5rem;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+    .about-hero p {
+        color: #475569;
+        font-size: 1.15rem;
+        max-width: 800px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+    .about-hero strong {
+        color: #4f46e5;
+    }
 
-<section class="grid grid-2" style="margin-top:24px; align-items:start;">
-    <div class="card">
-        <h2 class="section-title">Model improvements made</h2>
-        <ul class="list">
-            <li>Added <strong>sender-aware input engineering</strong> by prepending a normalized sender token to the cleaned message.</li>
-            <li>Strengthened the ensemble with <strong>word TF-IDF + character TF-IDF feature unions</strong> for linear models.</li>
-            <li>Standardized file names and inference helpers so training and deployment use the same saved model names.</li>
-            <li>Refactored the Flask app to return <strong>both model outputs in a single request</strong>.</li>
-            <li>Removed leftover Streamlit usage from project instructions and aligned setup around Flask.</li>
-        </ul>
+    /* Info Grid (3-column) */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+    }
+    .info-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 32px;
+        border: 1px solid #e2e8f0;
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+    .info-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+    }
+    .info-card h2 {
+        font-size: 1.25rem;
+        color: #0f172a;
+        margin-bottom: 12px;
+        font-weight: 700;
+    }
+    .info-card p {
+        font-size: 0.95rem;
+        color: #64748b;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    /* Detailed Sections (2-column) */
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        margin-top: 24px;
+    }
+    @media (min-width: 900px) {
+        .detail-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .detail-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 32px;
+        border: 1px solid #e2e8f0;
+        height: 100%;
+    }
+    .detail-card.accent-indigo { border-top: 6px solid #6366f1; }
+    .detail-card.accent-emerald { border-top: 6px solid #10b981; }
+    .detail-card.accent-blue { border-top: 6px solid #3b82f6; }
+    .detail-card.accent-slate { border-top: 6px solid #475569; }
+
+    .section-title {
+        color: #0f172a;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Styled Lists */
+    .custom-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .custom-list li {
+        padding: 12px 0;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.95rem;
+        color: #475569;
+        line-height: 1.5;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .custom-list li:last-child {
+        border-bottom: none;
+    }
+    .custom-list li::before {
+        content: "→";
+        color: #6366f1;
+        font-weight: bold;
+    }
+    .check-list li::before {
+        content: "✓";
+        color: #10b981;
+    }
+
+    .badge {
+        background: #f1f5f9;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-weight: 600;
+        color: #e11d48;
+    }
+</style>
+
+<div class="about-container">
+    <section class="about-hero">
+        <span class="chip">Project Overview</span>
+        <h1>About the SMS Security Classification Project</h1>
+        <p>
+            This project addresses SMS fraud and message triage by automatically classifying incoming texts into 
+            <strong>ads</strong>, <strong>gov</strong>, <strong>notifs</strong>, <strong>otp</strong>, and <strong>spam</strong>.
+            The system integrates two distinct architectures to provide robust security analysis.
+        </p>
+    </section>
+
+    <section class="info-grid">
+        <div class="info-card">
+            <div style="font-size: 2rem; margin-bottom: 10px;">⚠️</div>
+            <h2>The Problem</h2>
+            <p>Users receive mixed Tagalog-English SMS where scams and institutional alerts look similar. This classifier helps flag risks and support safer mobile interaction.</p>
+        </div>
+        <div class="info-card">
+            <div style="font-size: 2rem; margin-bottom: 10px;">📊</div>
+            <h2>The Dataset</h2>
+            <p>Using specialized preprocessing, we preserve <strong>sender identity</strong> as a normalized token, allowing models to learn from both content and source patterns.</p>
+        </div>
+        <div class="info-card">
+            <div style="font-size: 2rem; margin-bottom: 10px;">🚀</div>
+            <h2>The Output</h2>
+            <p>Our Flask-only application delivers dual-model predictions with detailed confidence levels and clear interpretations for end-users.</p>
+        </div>
+    </section>
+
+    <div class="detail-grid">
+        <div class="detail-card accent-indigo">
+            <h2 class="section-title">Model Improvements</h2>
+            <ul class="custom-list">
+                <li><strong>Sender-Aware Input:</strong> Prepending normalized sender tokens to the cleaned message bodies.</li>
+                <li><strong>Feature Unions:</strong> Combined word-level and character-level TF-IDF for stronger linear discrimination.</li>
+                <li><strong>Architecture Sync:</strong> Standardized inference helpers so training and deployment share the same logic.</li>
+                <li><strong>Unified Backend:</strong> Refactored Flask to return Ensemble and Neural Network outputs in a single atomic request.</li>
+                <li><strong>Course Compliance:</strong> Removed Streamlit dependencies to focus on a pure Flask-based web implementation.</li>
+            </ul>
+        </div>
+
+        <div class="detail-card accent-emerald">
+            <h2 class="section-title">Requirements Checklist</h2>
+            <ul class="custom-list check-list">
+                {% for item in requirements %}
+                    <li>{{ item }}</li>
+                {% else %}
+                    <li>Integrated Flask Web Framework</li>
+                    <li>Dual-Model (Ensemble & BiLSTM) Architecture</li>
+                    <li>Sender and Message Body Input Support</li>
+                    <li>Confidence Score Visualization</li>
+                {% endfor %}
+            </ul>
+        </div>
     </div>
 
-    <div class="card">
-        <h2 class="section-title">Requirements checklist</h2>
-        <ul class="list">
-            {% for item in requirements %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-</section>
+    <div class="detail-grid">
+        <div class="detail-card accent-blue">
+            <h2 class="section-title">Presentation Talking Points</h2>
+            <ul class="custom-list">
+                <li><strong>Sender Metadata:</strong> Why metadata improves discrimination between numeric spam and institutional sources.</li>
+                <li><strong>Model Divergence:</strong> Comparing how the Ensemble vs Neural Network handle minority classes like <span class="badge">gov</span>.</li>
+                <li><strong>Bilingual Nuance:</strong> Decisions made for preprocessing Taglish text and noisy punctuation patterns.</li>
+                <li><strong>Uncertainty:</strong> Using confidence scores to explain why a model might be "unsure" of a classification.</li>
+            </ul>
+        </div>
 
-<section class="grid grid-2" style="margin-top:24px; align-items:start;">
-    <div class="card">
-        <h2 class="section-title">Suggested presentation talking points</h2>
-        <ul class="list">
-            <li>Explain why sender metadata improves discrimination between spam-like numeric sources and known institutional senders.</li>
-            <li>Compare ensemble vs neural network behavior on minority classes like <strong>gov</strong> and <strong>ads</strong>.</li>
-            <li>Discuss preprocessing decisions for bilingual SMS text and noisy punctuation/number patterns.</li>
-            <li>Show confidence scores, not just top predictions, to explain uncertainty.</li>
-        </ul>
+        <div class="detail-card accent-slate">
+            <h2 class="section-title">Proactive Improvements</h2>
+            <ul class="custom-list">
+                <li><strong>Multi-page Dashboard:</strong> Clean separation between analyzer, metrics, and documentation.</li>
+                <li><strong>Graceful Fallbacks:</strong> Integrated error handling if TensorFlow or specific models are missing in the runtime.</li>
+                <li><strong>Modular Design:</strong> Decoupled inference helpers that work across CLI, API, and Web frontends.</li>
+            </ul>
+        </div>
     </div>
-
-    <div class="card">
-        <h2 class="section-title">Proactive improvements still aligned with the brief</h2>
-        <ul class="list">
-            <li>Flask multi-page structure for analyzer, project description, and metrics.</li>
-            <li>Graceful neural-network fallback message if TensorFlow is missing in the runtime environment.</li>
-            <li>Reusable inference helpers for CLI and web deployment.</li>
-        </ul>
-    </div>
-</section>
+</div>
 {% endblock %}

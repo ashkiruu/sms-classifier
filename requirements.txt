@@ -14,3 +14,6 @@ tensorflow>=2.16,<2.21
 
 # Visualization / reports
 matplotlib>=3.9,<4.0
+
+# Optional database support
+mysql-connector-python>=9.6,<10.0
