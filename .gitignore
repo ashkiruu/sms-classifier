@@ -28,22 +28,14 @@ ENV/
 .ipynb_checkpoints/
 *.ipynb
 
-# Data (raw data should not be committed)
-data/raw/
-*.xlsx
-*.csv
-*.json
+# NOTE: data/, models/ and outputs/reports/ are intentionally NOT ignored.
+# The deployed app loads the models and metrics reports from the repo.
 
-# Outputs (generated files)
-outputs/figures/*.png
-outputs/figures/*.jpg
-outputs/reports/*.txt
-outputs/reports/*.csv
+# Runtime-generated prediction history (local only)
+outputs/history/
 
-# Models
-models/*.pkl
-models/*.joblib
-models/*.h5
+# Vercel
+.vercel/
 
 # Logs
 *.log

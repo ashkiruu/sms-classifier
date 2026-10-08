@@ -1,21 +1,26 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 # ---------- File fallback configuration ----------
 BASE_DIR = Path(__file__).resolve().parent.parent
-HISTORY_DIR = BASE_DIR / "outputs" / "history"
-HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+# Serverless hosts (Vercel) have a read-only project directory; only the temp dir is writable.
+if os.environ.get("VERCEL"):
+    HISTORY_DIR = Path(tempfile.gettempdir()) / "sms_classifier_history"
+else:
+    HISTORY_DIR = BASE_DIR / "outputs" / "history"
 HISTORY_FILE = HISTORY_DIR / "message_history.json"
 
-# ---------- MySQL configuration ----------
-MYSQL_HOST = "localhost"
-MYSQL_USER = "root"
-MYSQL_PASSWORD = ""
-MYSQL_DATABASE = "sms_classifier"
+# ---------- MySQL configuration (override with environment variables) ----------
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
+MYSQL_USER = os.environ.get("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", "")
+MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE", "sms_classifier")
 MYSQL_TABLE = "message_analyses"
 
 
@@ -31,19 +36,25 @@ def _build_record(sender: str, message: str, ensemble_result: dict, nn_result: d
     }
 
 
-def _save_to_json(record: dict[str, Any]) -> None:
-    if HISTORY_FILE.exists():
-        try:
-            existing = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
-            if not isinstance(existing, list):
+def _save_to_json(record: dict[str, Any]) -> bool:
+    try:
+        HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+        if HISTORY_FILE.exists():
+            try:
+                existing = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
+                if not isinstance(existing, list):
+                    existing = []
+            except Exception:
                 existing = []
-        except Exception:
+        else:
             existing = []
-    else:
-        existing = []
 
-    existing.append(record)
-    HISTORY_FILE.write_text(json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8")
+        existing.append(record)
+        HISTORY_FILE.write_text(json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8")
+        return True
+    except OSError:
+        # History is a nice-to-have; never fail a prediction because it could not be stored.
+        return False
 
 
 def _get_mysql_connector():
@@ -180,6 +191,7 @@ def save_analysis_history(
     Returns:
         'mysql' if saved to MySQL
         'json' if saved to fallback JSON file
+        'none' if neither storage was available
     """
     record = _build_record(
         sender=sender,
@@ -191,8 +203,7 @@ def save_analysis_history(
     if _save_to_mysql(record):
         return "mysql"
 
-    _save_to_json(record)
-    return "json"
+    return "json" if _save_to_json(record) else "none"
 
 
 def load_analysis_history(limit: int | None = None) -> list[dict[str, Any]]:

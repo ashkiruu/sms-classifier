@@ -1,0 +1,8 @@
+# Everything needed to retrain models, run EDA, and use the optional MySQL history.
+# Install with: pip install -r requirements-train.txt
+-r requirements.txt
+
+openpyxl>=3.1,<4.0
+nltk>=3.9,<4.0
+matplotlib>=3.9,<4.0
+mysql-connector-python>=9.6,<10.0

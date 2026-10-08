@@ -70,6 +70,10 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+`requirements.txt` has only what the web app needs to run (this is also what Vercel installs).
+To retrain models or run EDA, install `requirements-train.txt` instead.
+The saved models require `scikit-learn==1.8.0` exactly.
+
 ## Run the Flask app
 
 ```bash

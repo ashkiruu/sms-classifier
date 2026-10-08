@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{data/**,outputs/figures/**,outputs/history/**,models/best_model.pkl,models/soft_voting_model.pkl,models/stacking_model.pkl,**/__pycache__/**,.git/**,*.md}"
+    }
+  }
+}

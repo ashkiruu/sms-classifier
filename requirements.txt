@@ -1,19 +1,10 @@
-# Core web app
-Flask>=3.1,<4.0
-
-# Machine learning
-scikit-learn>=1.8,<1.9
-numpy>=2.0,<2.5
-pandas>=2.2,<3.1
-joblib>=1.5,<2.0
-openpyxl>=3.1,<4.0
-nltk>=3.9,<4.0
-
-# Neural network
-tensorflow>=2.16,<2.21
-
-# Visualization / reports
-matplotlib>=3.9,<4.0
-
-# Optional database support
-mysql-connector-python>=9.6,<10.0
+# Runtime dependencies only (what Vercel installs). Pinned to the versions the
+# saved models were built and tested with. The pickled ensemble REQUIRES
+# scikit-learn 1.8.0 - other versions fail to unpickle or predict.
+Flask==3.1.2
+scikit-learn==1.8.0
+numpy==2.2.6
+pandas==2.3.2
+joblib==1.5.2
+tensorflow==2.20.0
+keras==3.13.1
