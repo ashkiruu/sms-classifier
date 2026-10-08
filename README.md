@@ -98,7 +98,13 @@ python src/train_ensemble.py
 
 ```bash
 python src/train_nn.py
+python src/export_nn_numpy.py
 ```
+
+Training needs `requirements-train.txt` (TensorFlow). The second command exports the trained
+network to `models/nn_numpy_weights.npz` and `models/nn_numpy_meta.json`. The web app and CLI
+run the network from those files with plain numpy, so TensorFlow is **not** needed to serve
+predictions (this keeps the Vercel deployment small). Re-run the export after every retrain.
 
 ## Run prediction from the command line
 
@@ -142,5 +148,5 @@ This version is designed to align with the brief by providing:
 
 ## Notes
 
-- If TensorFlow is not installed, the Flask app will still run the ensemble model and will clearly report that the neural network is unavailable.
-- For full requirement compliance during presentation/demo, install TensorFlow and retrain the neural network.
+- If the exported NN files are missing, the Flask app still runs the ensemble model and clearly reports that the neural network is unavailable (run `python src/export_nn_numpy.py`).
+- English stopwords are bundled in `src/english_stopwords.txt`, so no NLTK download is needed at runtime.

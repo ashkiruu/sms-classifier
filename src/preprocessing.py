@@ -9,34 +9,22 @@ from typing import Optional
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-try:
-    import nltk
-    from nltk.corpus import stopwords
-
-    try:
-        nltk.data.find("corpora/stopwords")
-    except LookupError:
-        try:
-            nltk.download("stopwords", quiet=True)
-        except Exception:
-            pass
-
-    try:
-        _ENGLISH_STOPWORDS = set(stopwords.words("english"))
-    except LookupError:
-        _ENGLISH_STOPWORDS = set()
-    _NLTK_AVAILABLE = True
-except Exception:
-    _NLTK_AVAILABLE = False
-    _ENGLISH_STOPWORDS = set()
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from utils import DEFAULT_TRAIN_DATA, setup_logger
 
 logger = setup_logger(__name__)
 
-if not _NLTK_AVAILABLE or not _ENGLISH_STOPWORDS:
-    logger.warning("NLTK stopwords unavailable; continuing with Tagalog stopwords only.")
+# NLTK's English stopword list, saved in the repo so preprocessing is identical everywhere.
+# (Downloading NLTK data at runtime fails on read-only hosts like Vercel and would
+# silently change the model input.)
+_STOPWORDS_FILE = Path(__file__).resolve().parent / "english_stopwords.txt"
+try:
+    _ENGLISH_STOPWORDS = {w.strip() for w in _STOPWORDS_FILE.read_text(encoding="utf-8").splitlines() if w.strip()}
+except OSError:
+    _ENGLISH_STOPWORDS = set()
+
+if not _ENGLISH_STOPWORDS:
+    logger.warning("English stopwords file missing; continuing with Tagalog stopwords only.")
 
 TAGALOG_STOPWORDS: set[str] = {
     "ang", "ng", "mga", "na", "sa", "at", "ay", "ko", "mo", "ka",

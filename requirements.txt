@@ -6,5 +6,5 @@ scikit-learn==1.8.0
 numpy==2.2.6
 pandas==2.3.2
 joblib==1.5.2
-tensorflow==2.20.0
-keras==3.13.1
+# No TensorFlow here on purpose: the neural network runs on numpy (src/nn_numpy.py),
+# which keeps the deployed bundle far below Vercel's size limit.

@@ -3,7 +3,7 @@
   "functions": {
     "app.py": {
       "maxDuration": 60,
-      "excludeFiles": "{data/**,outputs/figures/**,outputs/history/**,models/best_model.pkl,models/soft_voting_model.pkl,models/stacking_model.pkl,**/__pycache__/**,.git/**,*.md}"
+      "excludeFiles": "{data/**,outputs/figures/**,outputs/history/**,models/best_model.pkl,models/soft_voting_model.pkl,models/stacking_model.pkl,models/nn_best_model.keras,models/nn_tokenizer.pkl,models/nn_label_encoder.pkl,**/__pycache__/**,.git/**,*.md}"
     }
   }
 }

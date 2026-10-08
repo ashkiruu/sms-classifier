@@ -8,6 +8,7 @@ import joblib
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from nn_numpy import NumpyNN
 from preprocessing import build_model_input
 from utils import MODELS_DIR, confidence_descriptor, interpret_label, setup_logger
 
@@ -15,9 +16,6 @@ logger = setup_logger(__name__)
 
 _ENSEMBLE_MODEL = None
 _NN_MODEL = None
-_NN_TOKENIZER = None
-_NN_LABEL_ENCODER = None
-_NN_IMPORT_ERROR = None
 
 
 def get_ensemble_model():
@@ -31,31 +29,22 @@ def get_ensemble_model():
     return _ENSEMBLE_MODEL
 
 
-def get_nn_components():
-    global _NN_MODEL, _NN_TOKENIZER, _NN_LABEL_ENCODER, _NN_IMPORT_ERROR
-    if _NN_MODEL is not None and _NN_TOKENIZER is not None and _NN_LABEL_ENCODER is not None:
-        return _NN_MODEL, _NN_TOKENIZER, _NN_LABEL_ENCODER
-    if _NN_IMPORT_ERROR is not None:
-        raise RuntimeError(_NN_IMPORT_ERROR)
+def get_nn_model() -> NumpyNN:
+    """Load the neural network as numpy-only weights (no TensorFlow needed at runtime).
 
-    model_path = MODELS_DIR / "nn_best_model.keras"
-    tokenizer_path = MODELS_DIR / "nn_tokenizer.pkl"
-    label_encoder_path = MODELS_DIR / "nn_label_encoder.pkl"
-
-    if not all(path.exists() for path in [model_path, tokenizer_path, label_encoder_path]):
-        raise FileNotFoundError("Neural network files are incomplete. Retrain the NN model first.")
-
-    try:
-        import tensorflow as tf
-    except Exception as exc:
-        _NN_IMPORT_ERROR = f"TensorFlow is not installed or failed to import: {exc}"
-        raise RuntimeError(_NN_IMPORT_ERROR) from exc
-
-    _NN_MODEL = tf.keras.models.load_model(model_path)
-    _NN_TOKENIZER = joblib.load(tokenizer_path)
-    _NN_LABEL_ENCODER = joblib.load(label_encoder_path)
-    logger.info("Loaded neural network model from %s", model_path)
-    return _NN_MODEL, _NN_TOKENIZER, _NN_LABEL_ENCODER
+    The files are produced from the trained Keras model by `python src/export_nn_numpy.py`.
+    """
+    global _NN_MODEL
+    if _NN_MODEL is None:
+        weights_path = MODELS_DIR / "nn_numpy_weights.npz"
+        meta_path = MODELS_DIR / "nn_numpy_meta.json"
+        if not (weights_path.exists() and meta_path.exists()):
+            raise FileNotFoundError(
+                "Neural network export files are missing. Run `python src/export_nn_numpy.py` after training."
+            )
+        _NN_MODEL = NumpyNN(weights_path, meta_path)
+        logger.info("Loaded neural network weights from %s", weights_path)
+    return _NN_MODEL
 
 
 def _format_result(prediction: str, probabilities: np.ndarray, labels: list[str]) -> dict:
@@ -83,8 +72,7 @@ def predict_with_ensemble(message: str, sender: str = "unknown") -> dict:
 
 def predict_with_nn(message: str, sender: str = "unknown") -> dict:
     try:
-        model, tokenizer_bundle, label_encoder = get_nn_components()
-        from tensorflow.keras.preprocessing.sequence import pad_sequences
+        nn_model = get_nn_model()
     except Exception as exc:
         return {
             "available": False,
@@ -115,31 +103,14 @@ def predict_with_nn(message: str, sender: str = "unknown") -> dict:
 
     model_input = build_model_input(message=message, sender=sender)
 
-    sender_tokenizer = tokenizer_bundle["sender_tokenizer"]
-    message_tokenizer = tokenizer_bundle["message_tokenizer"]
-    sender_max_len = tokenizer_bundle["sender_max_len"]
-    message_max_len = tokenizer_bundle["message_max_len"]
-
     sender_text = _clean_sender_text(sender)
     message_text = _clean_message_text(message)
 
-    sender_seq = sender_tokenizer.texts_to_sequences([sender_text])
-    message_seq = message_tokenizer.texts_to_sequences([message_text])
-
-    sender_padded = pad_sequences(sender_seq, maxlen=sender_max_len, padding="post", truncating="post")
-    message_padded = pad_sequences(message_seq, maxlen=message_max_len, padding="post", truncating="post")
-
-    probabilities = model.predict(
-        {
-            "sender_input": sender_padded,
-            "message_input": message_padded,
-        },
-        verbose=0,
-    )[0]
+    probabilities = nn_model.predict_proba([sender_text], [message_text])[0]
 
     pred_idx = int(np.argmax(probabilities))
-    prediction = label_encoder.inverse_transform([pred_idx])[0]
-    labels = label_encoder.classes_.tolist()
+    labels = nn_model.labels
+    prediction = labels[pred_idx]
     result = _format_result(prediction, probabilities, labels)
     result.update({"available": True, "model_input": model_input})
     return result
