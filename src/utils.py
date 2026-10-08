@@ -30,7 +30,11 @@ LABEL_DESCRIPTIONS = {
 
 def ensure_dirs() -> None:
     for directory in [RAW_DATA_DIR, CONFIDENCE_DATA_DIR, OUTPUTS_DIR, FIGURES_DIR, REPORTS_DIR, MODELS_DIR]:
-        directory.mkdir(parents=True, exist_ok=True)
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            # Read-only deployments (e.g. Vercel) cannot create folders; reading existing files still works.
+            pass
 
 
 def get_data_path(filename: str) -> Path:
